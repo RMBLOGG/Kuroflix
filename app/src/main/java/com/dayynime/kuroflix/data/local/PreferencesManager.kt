@@ -17,29 +17,15 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
  * dari semua sumber udah dinormalisasi jadi satu bentuk yang sama (VideoServer),
  * jadi cukup 1 preferensi buat "server favorit" tanpa perlu dipisah per-source.
  *
+ * Nama server yang bisa dipilih diambil LANGSUNG dari data API anime yang
+ * lagi dibuka (lihat AnimeViewModel.loadAvailableServers), bukan daftar
+ * statis — soalnya tiap anime/source bisa punya kombinasi server beda-beda.
+ *
  * Cara kerja matching: `server.name` (label dari API, mis. "Mp4Upload", "Server 1 - Filedon")
  * dicek apakah MENGANDUNG keyword pilihan user (case-insensitive). Kalau ketemu,
  * itu yang dipilih otomatis pas buka episode; kalau gak ketemu server dengan keyword
  * itu di episode tsb, fallback ke server pertama di list (behavior lama).
  */
-object PreferredServerOptions {
-    // value = keyword buat dicocokin ke server.name, label = ditampilin di UI
-    val ALL = listOf(
-        "" to "Otomatis (server pertama)",
-        "mp4upload" to "Mp4Upload",
-        "pixeldrain" to "Pixeldrain",
-        "filedon" to "Filedon",
-        "streamtape" to "Streamtape",
-        "mediafire" to "Mediafire",
-        "wibufile" to "Wibufile",
-        "filemoon" to "Filemoon",
-        "vidhide" to "Vidhide",
-        "blogger" to "Blogger/Google Drive",
-        "gdrive" to "GDrive",
-        "dailymotion" to "Dailymotion",
-        "ok.ru" to "OK.ru"
-    )
-}
 
 class PreferencesManager(private val context: Context) {
 

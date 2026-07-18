@@ -56,6 +56,29 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { preferencesManager.setPreferredServer(keyword) }
     }
 
+    // Daftar server yang BENERAN ADA buat anime yang lagi dibuka (diambil dari
+    // episode pertama sebagai sampel) — dipakai buat isi dropdown "Server Default"
+    // di DetailScreen, supaya cuma nampilin host yang relevan sama anime/source
+    // itu, bukan daftar gabungan semua host yang mungkin gak semuanya kepake.
+    private val _availableServers = MutableStateFlow<List<VideoServer>>(emptyList())
+    val availableServers: StateFlow<List<VideoServer>> = _availableServers.asStateFlow()
+
+    fun loadAvailableServers(animeDetail: AnimeDetail) {
+        viewModelScope.launch {
+            _availableServers.value = emptyList()
+            val sampleEpisode = animeDetail.episodes.firstOrNull() ?: return@launch
+            withContext(Dispatchers.IO) {
+                repository.getEpisode(_selectedSource.value, sampleEpisode.id)
+                    .catch { e -> Log.e("AnimeViewModel", "Gagal load daftar server buat dropdown", e) }
+                    .collect { servers ->
+                        // Server sering beda-beda kualitas dengan nama sama (mis. "Mp4Upload"
+                        // muncul di beberapa episode) — cukup ambil nama unik-nya aja.
+                        _availableServers.value = servers.distinctBy { it.name.lowercase() }
+                    }
+            }
+        }
+    }
+
     // Current global source selection (animasu, samehadaku, animekompi, donghua)
     private val _selectedSource = MutableStateFlow("animasu")
     val selectedSource: StateFlow<String> = _selectedSource.asStateFlow()

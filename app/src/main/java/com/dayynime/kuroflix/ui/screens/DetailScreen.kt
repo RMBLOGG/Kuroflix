@@ -32,7 +32,6 @@ import coil.compose.AsyncImage
 import com.dayynime.kuroflix.data.model.AnimeDetail
 import com.dayynime.kuroflix.data.model.AnimeItem
 import com.dayynime.kuroflix.data.model.EpisodeItem
-import com.dayynime.kuroflix.data.local.PreferredServerOptions
 import com.dayynime.kuroflix.ui.components.DarkOverlayGradient
 import com.dayynime.kuroflix.ui.components.FireGradient
 import com.dayynime.kuroflix.ui.components.GlowButton
@@ -55,6 +54,10 @@ fun DetailScreen(
 
     LaunchedEffect(key1 = animeId) {
         viewModel.loadDetail(animeId)
+    }
+
+    LaunchedEffect(key1 = detailState) {
+        (detailState as? DetailUiState.Success)?.let { viewModel.loadAvailableServers(it.detail) }
     }
 
     Box(
@@ -229,13 +232,19 @@ fun DetailScreen(
                             }
                         }
 
-                        // Default server streaming — berlaku global lintas 4 sumber data,
-                        // dipakai buat auto-pilih server pas buka episode manapun.
+                        // Default server streaming — cuma nampilin server yang BENERAN ADA
+                        // buat anime ini (hasil sampel episode pertama), bukan daftar
+                        // gabungan semua host yang mungkin. Berlaku global lintas 4 sumber
+                        // data karena disimpen berdasarkan nama server, bukan per-source.
                         val preferredKeyword by viewModel.preferredServerKeyword.collectAsState()
+                        val availableServers by viewModel.availableServers.collectAsState()
                         var serverMenuExpanded by remember { mutableStateOf(false) }
-                        val currentLabel = PreferredServerOptions.ALL
-                            .firstOrNull { it.first == preferredKeyword }?.second
-                            ?: "Otomatis (server pertama)"
+                        val currentLabel = if (preferredKeyword.isBlank()) {
+                            "Otomatis (server pertama)"
+                        } else {
+                            availableServers.firstOrNull { it.name.contains(preferredKeyword, ignoreCase = true) }?.name
+                                ?: preferredKeyword
+                        }
 
                         Box(
                             modifier = Modifier
@@ -245,7 +254,7 @@ fun DetailScreen(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(50))
                                     .background(DarkSurface)
-                                    .clickable { serverMenuExpanded = true }
+                                    .clickable(enabled = availableServers.isNotEmpty()) { serverMenuExpanded = true }
                                     .padding(horizontal = 14.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -257,7 +266,8 @@ fun DetailScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
-                                    text = "Server Default: $currentLabel",
+                                    text = if (availableServers.isEmpty()) "Server Default: memuat..."
+                                           else "Server Default: $currentLabel",
                                     color = TextSecondary,
                                     style = Typography.labelSmall
                                 )
@@ -267,16 +277,29 @@ fun DetailScreen(
                                 onDismissRequest = { serverMenuExpanded = false },
                                 modifier = Modifier.background(DarkSurface)
                             ) {
-                                PreferredServerOptions.ALL.forEach { (keyword, label) ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = "Otomatis (server pertama)",
+                                            color = if (preferredKeyword.isBlank()) OrangeAccent else Color.White
+                                        )
+                                    },
+                                    onClick = {
+                                        viewModel.setPreferredServer("")
+                                        serverMenuExpanded = false
+                                    }
+                                )
+                                availableServers.forEach { server ->
                                     DropdownMenuItem(
                                         text = {
                                             Text(
-                                                text = label,
-                                                color = if (keyword == preferredKeyword) OrangeAccent else Color.White
+                                                text = server.name,
+                                                color = if (server.name.contains(preferredKeyword, ignoreCase = true) && preferredKeyword.isNotBlank())
+                                                    OrangeAccent else Color.White
                                             )
                                         },
                                         onClick = {
-                                            viewModel.setPreferredServer(keyword)
+                                            viewModel.setPreferredServer(server.name)
                                             serverMenuExpanded = false
                                         }
                                     )
