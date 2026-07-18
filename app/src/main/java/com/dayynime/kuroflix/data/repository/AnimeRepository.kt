@@ -288,7 +288,7 @@ class AnimeRepository(private val context: Context) {
         emit(map)
     }
 
-
+    fun getCategory(source: String, category: String, page: Int): Flow<Pair<List<AnimeItem>, Boolean>> = flow {
         val result: Pair<List<AnimeItem>, Boolean> = when (source.lowercase()) {
             "animasu" -> {
                 val res = when (category) {
