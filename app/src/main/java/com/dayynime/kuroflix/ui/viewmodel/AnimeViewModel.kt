@@ -417,13 +417,13 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                     // yang seragam). Kalau preferensinya "Otomatis" atau server pilihan
                     // gak tersedia di episode ini, fallback ke server pertama seperti biasa.
                     val preferred = preferencesManager.findPreferred(servers, preferredServerKeyword.value)
-                    // "Otomatis" sekarang gak asal ambil server pertama — prioritasin
-                    // server yang host-nya kedeteksi bakal jadi ExoPlayer (bukan WebView
-                    // fallback), pakai deteksi cepat VideoExtractor.isLikelyExoPlayer().
-                    // Kalau gak ada satupun yang cocok, baru bener-bener fallback ke
-                    // server pertama di list (behavior lama).
+                    // "Otomatis" prioritas: RELIABLE (murni regex, jarang gagal) dulu,
+                    // baru SHAKY (Blogger/Abyss - bisa ExoPlayer tapi via WebView yang
+                    // gampang gagal), baru bener-bener fallback ke server pertama.
                     val autoDefault = servers.firstOrNull {
-                        VideoExtractor.isLikelyExoPlayer("${it.name} ${it.embedUrl}")
+                        VideoExtractor.getPlaybackConfidence("${it.name} ${it.embedUrl}") == VideoExtractor.PlaybackConfidence.RELIABLE
+                    } ?: servers.firstOrNull {
+                        VideoExtractor.getPlaybackConfidence("${it.name} ${it.embedUrl}") == VideoExtractor.PlaybackConfidence.SHAKY
                     } ?: servers.first()
                     selectServer(preferred ?: autoDefault, servers, animeDetail)
                 }

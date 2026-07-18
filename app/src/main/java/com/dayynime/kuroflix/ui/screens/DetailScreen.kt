@@ -292,11 +292,11 @@ fun DetailScreen(
                                 availableServers
                                     .sortedByDescending {
                                         com.dayynime.kuroflix.data.network.VideoExtractor
-                                            .isLikelyExoPlayer("${it.name} ${it.embedUrl}")
+                                            .getPlaybackConfidence("${it.name} ${it.embedUrl}").ordinal.let { o -> -o }
                                     }
                                     .forEach { server ->
-                                        val isExo = com.dayynime.kuroflix.data.network.VideoExtractor
-                                            .isLikelyExoPlayer("${server.name} ${server.embedUrl}")
+                                        val confidence = com.dayynime.kuroflix.data.network.VideoExtractor
+                                            .getPlaybackConfidence("${server.name} ${server.embedUrl}")
                                         DropdownMenuItem(
                                             text = {
                                                 Row(
@@ -308,14 +308,22 @@ fun DetailScreen(
                                                         color = if (server.name.contains(preferredKeyword, ignoreCase = true) && preferredKeyword.isNotBlank())
                                                             OrangeAccent else Color.White
                                                     )
+                                                    val (bgColor, badgeText) = when (confidence) {
+                                                        com.dayynime.kuroflix.data.network.VideoExtractor.PlaybackConfidence.RELIABLE ->
+                                                            Color(0xFF1B5E20) to "▶ ExoPlayer"
+                                                        com.dayynime.kuroflix.data.network.VideoExtractor.PlaybackConfidence.SHAKY ->
+                                                            Color(0xFF8F6300) to "⚠ ExoPlayer (kadang gagal)"
+                                                        com.dayynime.kuroflix.data.network.VideoExtractor.PlaybackConfidence.WEBVIEW ->
+                                                            Color(0xFF5D4037) to "🌐 WebView"
+                                                    }
                                                     Box(
                                                         modifier = Modifier
                                                             .clip(RoundedCornerShape(50))
-                                                            .background(if (isExo) Color(0xFF1B5E20) else Color(0xFF5D4037))
+                                                            .background(bgColor)
                                                             .padding(horizontal = 6.dp, vertical = 2.dp)
                                                     ) {
                                                         Text(
-                                                            text = if (isExo) "▶ ExoPlayer" else "🌐 WebView",
+                                                            text = badgeText,
                                                             color = Color.White,
                                                             style = Typography.labelSmall
                                                         )

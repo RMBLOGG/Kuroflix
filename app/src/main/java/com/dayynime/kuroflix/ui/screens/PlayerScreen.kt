@@ -196,12 +196,12 @@ fun PlayerScreen(
                             state.servers
                                 .sortedByDescending {
                                     com.dayynime.kuroflix.data.network.VideoExtractor
-                                        .isLikelyExoPlayer("${it.name} ${it.embedUrl}")
+                                        .getPlaybackConfidence("${it.name} ${it.embedUrl}").ordinal.let { o -> -o }
                                 }
                                 .forEach { server ->
                                 val isSelected = state.selectedServer?.name == server.name
-                                val isExo = com.dayynime.kuroflix.data.network.VideoExtractor
-                                    .isLikelyExoPlayer("${server.name} ${server.embedUrl}")
+                                val confidence = com.dayynime.kuroflix.data.network.VideoExtractor
+                                    .getPlaybackConfidence("${server.name} ${server.embedUrl}")
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -232,17 +232,26 @@ fun PlayerScreen(
                                                 style = Typography.bodyLarge,
                                                 fontWeight = FontWeight.Bold
                                             )
+                                            val (bgColor, badgeText) = when (confidence) {
+                                                com.dayynime.kuroflix.data.network.VideoExtractor.PlaybackConfidence.RELIABLE ->
+                                                    Color(0xFF1B5E20) to "▶ ExoPlayer"
+                                                com.dayynime.kuroflix.data.network.VideoExtractor.PlaybackConfidence.SHAKY ->
+                                                    Color(0xFF8F6300) to "⚠ ExoPlayer (kadang gagal)"
+                                                com.dayynime.kuroflix.data.network.VideoExtractor.PlaybackConfidence.WEBVIEW ->
+                                                    Color(0xFF5D4037) to "🌐 WebView"
+                                            }
                                             Box(
                                                 modifier = Modifier
                                                     .clip(RoundedCornerShape(50))
-                                                    .background(if (isExo) Color(0xFF1B5E20) else Color(0xFF5D4037))
+                                                    .background(bgColor)
                                                     .padding(horizontal = 8.dp, vertical = 3.dp)
                                             ) {
                                                 Text(
-                                                    text = if (isExo) "▶ ExoPlayer" else "🌐 WebView",
+                                                    text = badgeText,
                                                     color = Color.White,
                                                     style = Typography.labelSmall
                                                 )
+
                                             }
                                         }
                                         if (isSelected) {
