@@ -21,7 +21,8 @@ sealed interface HomeUiState {
         val popular: List<AnimeItem>,
         val ongoing: List<AnimeItem>,
         val completed: List<AnimeItem>,
-        val movies: List<AnimeItem>
+        val movies: List<AnimeItem>,
+        val upcoming: List<AnimeItem> = emptyList()
     ) : HomeUiState
     data class Error(val message: String) : HomeUiState
 }
@@ -264,7 +265,8 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                         popular = homeData.popular,
                         ongoing = homeData.ongoing,
                         completed = homeData.completed,
-                        movies = homeData.movies
+                        movies = homeData.movies,
+                        upcoming = homeData.upcoming
                     )
                 }
         }

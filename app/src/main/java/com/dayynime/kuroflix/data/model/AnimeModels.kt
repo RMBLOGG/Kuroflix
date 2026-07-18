@@ -56,5 +56,6 @@ data class HomeData(
     val popular: List<AnimeItem> = emptyList(),
     val ongoing: List<AnimeItem> = emptyList(),
     val completed: List<AnimeItem> = emptyList(),
-    val movies: List<AnimeItem> = emptyList()
+    val movies: List<AnimeItem> = emptyList(),
+    val upcoming: List<AnimeItem> = emptyList()
 )

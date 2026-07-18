@@ -264,14 +264,15 @@ fun HomeScreen(
                             }
                         }
 
-                        // Section Coming Soon (Akan Tayang - desaturated mockup)
+                        // Section Coming Soon (Akan Tayang - dari jadwal rilis asli)
+                        if (state.upcoming.isNotEmpty()) {
                         SectionHeader(title = "Akan Tayang")
                         LazyRow(
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.padding(bottom = 24.dp)
                         ) {
-                            items(state.latest.take(4)) { anime ->
+                            items(state.upcoming.take(10)) { anime ->
                                 Box(modifier = Modifier.graphicsLayer { alpha = 0.6f }) {
                                     AnimeCard(
                                         anime = anime,
@@ -294,6 +295,7 @@ fun HomeScreen(
                                     }
                                 }
                             }
+                        }
                         }
                     }
                 }

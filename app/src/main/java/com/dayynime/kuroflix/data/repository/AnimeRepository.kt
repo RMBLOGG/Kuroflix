@@ -185,7 +185,8 @@ class AnimeRepository(private val context: Context) {
                     ongoing = ongoing,
                     popular = ongoing,
                     completed = emptyList(),
-                    movies = emptyList()
+                    movies = emptyList(),
+                    upcoming = fetchUpcomingFromSchedule(source)
                 )
             }
             "samehadaku" -> {
@@ -197,7 +198,8 @@ class AnimeRepository(private val context: Context) {
                     popular = recent,
                     ongoing = recent,
                     completed = emptyList(),
-                    movies = movie
+                    movies = movie,
+                    upcoming = fetchUpcomingFromSchedule(source)
                 )
             }
             "animekompi" -> {
@@ -208,7 +210,8 @@ class AnimeRepository(private val context: Context) {
                     popular = list,
                     ongoing = list,
                     completed = emptyList(),
-                    movies = emptyList()
+                    movies = emptyList(),
+                    upcoming = fetchUpcomingFromSchedule(source)
                 )
             }
             "donghua" -> {
@@ -221,7 +224,8 @@ class AnimeRepository(private val context: Context) {
                     popular = latestRelease,
                     ongoing = ongoing,
                     completed = completed,
-                    movies = emptyList()
+                    movies = emptyList(),
+                    upcoming = fetchUpcomingFromSchedule(source)
                 )
             }
             else -> HomeData()
@@ -250,7 +254,7 @@ class AnimeRepository(private val context: Context) {
         }
     }
 
-    fun getSchedule(source: String): Flow<Map<String, List<AnimeItem>>> = flow {
+    private suspend fun fetchScheduleMap(source: String): Map<String, List<AnimeItem>> {
         val map = linkedMapOf<String, List<AnimeItem>>().apply {
             DAY_ORDER.forEach { put(it, emptyList()) }
         }
@@ -286,7 +290,32 @@ class AnimeRepository(private val context: Context) {
                 }
             }
         }
-        emit(map)
+        return map
+    }
+
+    // Ambil jadwal hari ini buat section "Akan Tayang" di Home.
+    // Kalau jadwal hari ini kosong, geser ke hari berikutnya yang ada isinya (looping max 7 hari).
+    private suspend fun fetchUpcomingFromSchedule(source: String): List<AnimeItem> {
+        val map = fetchScheduleMap(source)
+        val todayIndex = when (java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)) {
+            java.util.Calendar.SUNDAY -> 0
+            java.util.Calendar.MONDAY -> 1
+            java.util.Calendar.TUESDAY -> 2
+            java.util.Calendar.WEDNESDAY -> 3
+            java.util.Calendar.THURSDAY -> 4
+            java.util.Calendar.FRIDAY -> 5
+            else -> 6
+        }
+        for (offset in 0..6) {
+            val day = DAY_ORDER[(todayIndex + offset) % 7]
+            val list = map[day].orEmpty()
+            if (list.isNotEmpty()) return list
+        }
+        return emptyList()
+    }
+
+    fun getSchedule(source: String): Flow<Map<String, List<AnimeItem>>> = flow {
+        emit(fetchScheduleMap(source))
     }
 
     fun getCategory(source: String, category: String, page: Int): Flow<Pair<List<AnimeItem>, Boolean>> = flow {
