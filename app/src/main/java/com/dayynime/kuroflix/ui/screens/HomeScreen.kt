@@ -15,7 +15,10 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,13 +43,14 @@ import com.dayynime.kuroflix.ui.viewmodel.HomeUiState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: AnimeViewModel,
     onAnimeClick: (AnimeItem) -> Unit,
     onContinueWatchClick: (WatchHistoryEntity) -> Unit,
-    onScheduleClick: () -> Unit = {}
+    onScheduleClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {}
 ) {
     val currentSource by viewModel.selectedSource.collectAsState()
     val homeState by viewModel.homeUiState.collectAsState()
@@ -92,17 +96,17 @@ fun HomeScreen(
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(onClick = { viewModel.loadHome() }) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Refresh",
-                        tint = TextPrimary
-                    )
-                }
                 IconButton(onClick = onScheduleClick) {
                     Icon(
                         imageVector = Icons.Default.CalendarMonth,
                         contentDescription = "Jadwal Rilis",
+                        tint = TextPrimary
+                    )
+                }
+                IconButton(onClick = onSettingsClick) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Pengaturan",
                         tint = TextPrimary
                     )
                 }
@@ -141,7 +145,26 @@ fun HomeScreen(
             }
         }
 
-        // Main Scrollable Content
+        // Main Scrollable Content -- swipe ke bawah buat refresh manual
+        // (dulu ada icon refresh terpisah di header, sekarang gestur ini yang gantiin,
+        // biar slot icon di header lega buat Settings).
+        var isRefreshing by remember { mutableStateOf(false) }
+        val pullState = rememberPullToRefreshState()
+
+        LaunchedEffect(isRefreshing) {
+            if (isRefreshing) {
+                viewModel.loadHome()
+                delay(600)
+                isRefreshing = false
+            }
+        }
+
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { isRefreshing = true },
+            state = pullState,
+            modifier = Modifier.fillMaxSize()
+        ) {
         Box(modifier = Modifier.fillMaxSize()) {
             when (val state = homeState) {
                 is HomeUiState.Loading -> {
@@ -290,6 +313,7 @@ fun HomeScreen(
                     }
                 }
             }
+        }
         }
     }
 }

@@ -57,6 +57,23 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { preferencesManager.setPreferredServer(keyword) }
     }
 
+    // Autoplay episode berikutnya setelah episode saat ini selesai (dipakai di PlayerScreen)
+    val autoplayNextEpisode: StateFlow<Boolean> = preferencesManager.autoplayNextEpisode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun setAutoplayNextEpisode(enabled: Boolean) {
+        viewModelScope.launch { preferencesManager.setAutoplayNextEpisode(enabled) }
+    }
+
+    // Sumber default yang otomatis dipilih tiap app dibuka (diset dari SettingsScreen)
+    val defaultSource: StateFlow<String> = preferencesManager.defaultSource
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    fun setDefaultSource(source: String) {
+        viewModelScope.launch { preferencesManager.setDefaultSource(source) }
+        setSource(source)
+    }
+
     // Daftar server yang BENERAN ADA buat anime yang lagi dibuka (diambil dari
     // episode pertama sebagai sampel) — dipakai buat isi dropdown "Server Default"
     // di DetailScreen, supaya cuma nampilin host yang relevan sama anime/source
@@ -184,9 +201,16 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
-        // Load initial home page and genres
-        loadHome()
-        loadGenres()
+        // Kalau user pernah nyetel sumber default di Settings, langsung pakai itu
+        // sebelum load home pertama kali -- biar gak perlu pilih ulang tiap buka app.
+        viewModelScope.launch {
+            val saved = preferencesManager.defaultSource.first()
+            if (saved.isNotBlank()) {
+                _selectedSource.value = saved
+            }
+            loadHome()
+            loadGenres()
+        }
     }
 
     fun setSource(source: String) {

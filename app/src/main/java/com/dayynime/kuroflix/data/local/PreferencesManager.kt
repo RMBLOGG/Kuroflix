@@ -3,6 +3,7 @@ package com.dayynime.kuroflix.data.local
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -30,6 +31,8 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 class PreferencesManager(private val context: Context) {
 
     private val PREFERRED_SERVER_KEY = stringPreferencesKey("preferred_server_keyword")
+    private val AUTOPLAY_NEXT_KEY = booleanPreferencesKey("autoplay_next_episode")
+    private val DEFAULT_SOURCE_KEY = stringPreferencesKey("default_source")
 
     val preferredServerKeyword: Flow<String> = context.settingsDataStore.data
         .map { prefs -> prefs[PREFERRED_SERVER_KEY] ?: "" }
@@ -37,6 +40,33 @@ class PreferencesManager(private val context: Context) {
     suspend fun setPreferredServer(keyword: String) {
         context.settingsDataStore.edit { prefs ->
             prefs[PREFERRED_SERVER_KEY] = keyword
+        }
+    }
+
+    /**
+     * Autoplay episode berikutnya begitu episode saat ini selesai diputar.
+     * Default ON, karena ini yang lebih sering diharapkan user aplikasi streaming.
+     */
+    val autoplayNextEpisode: Flow<Boolean> = context.settingsDataStore.data
+        .map { prefs -> prefs[AUTOPLAY_NEXT_KEY] ?: true }
+
+    suspend fun setAutoplayNextEpisode(enabled: Boolean) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[AUTOPLAY_NEXT_KEY] = enabled
+        }
+    }
+
+    /**
+     * Sumber default (animasu/samehadaku/animekompi/donghua) yang otomatis
+     * dipilih tiap kali app dibuka, biar user gak perlu milih ulang tiap sesi.
+     * Kosong = belum pernah diset -> caller fallback ke sumber pertama (behavior lama).
+     */
+    val defaultSource: Flow<String> = context.settingsDataStore.data
+        .map { prefs -> prefs[DEFAULT_SOURCE_KEY] ?: "" }
+
+    suspend fun setDefaultSource(source: String) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[DEFAULT_SOURCE_KEY] = source
         }
     }
 

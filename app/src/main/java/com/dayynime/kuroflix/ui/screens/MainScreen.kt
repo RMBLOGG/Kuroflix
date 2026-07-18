@@ -44,6 +44,7 @@ import com.dayynime.kuroflix.ui.viewmodel.AnimeViewModel
 sealed class AppRoute {
     object MainShell : AppRoute()
     object Schedule : AppRoute()
+    object Settings : AppRoute()
     data class Detail(val animeId: String) : AppRoute()
     data class Player(val episode: EpisodeItem, val animeDetail: AnimeDetail) : AppRoute()
 }
@@ -102,6 +103,7 @@ fun MainScreen(viewModel: AnimeViewModel) {
                                     viewModel = viewModel,
                                     onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id)) },
                                     onScheduleClick = { navigateTo(AppRoute.Schedule) },
+                                    onSettingsClick = { navigateTo(AppRoute.Settings) },
                                     onContinueWatchClick = { historyItem ->
                                         // Load detailed object from historical logs
                                         viewModel.loadDetail(historyItem.animeId.substringAfter(":"))
@@ -186,6 +188,13 @@ fun MainScreen(viewModel: AnimeViewModel) {
                         )
                     }
 
+                    is AppRoute.Settings -> {
+                        SettingsScreen(
+                            viewModel = viewModel,
+                            onBackClick = { navigateBack() }
+                        )
+                    }
+
                     is AppRoute.Detail -> {
                         DetailScreen(
                             animeId = route.animeId,
@@ -202,7 +211,10 @@ fun MainScreen(viewModel: AnimeViewModel) {
                             episode = route.episode,
                             animeDetail = route.animeDetail,
                             viewModel = viewModel,
-                            onBackClick = { navigateBack() }
+                            onBackClick = { navigateBack() },
+                            onNextEpisode = { nextEp ->
+                                navigateTo(AppRoute.Player(nextEp, route.animeDetail))
+                            }
                         )
                     }
                 }

@@ -58,12 +58,22 @@ fun PlayerScreen(
     episode: EpisodeItem,
     animeDetail: AnimeDetail,
     viewModel: AnimeViewModel,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onNextEpisode: (EpisodeItem) -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = context as? android.app.Activity
     val playerState by viewModel.playerUiState.collectAsState()
+    val autoplayEnabled by viewModel.autoplayNextEpisode.collectAsState()
     val coroutineScope = rememberCoroutineScope()
+
+    // Episode berikutnya di daftar (urut sesuai data API) -- null kalau ini episode terakhir
+    val nextEpisode = remember(episode.id, animeDetail.episodes) {
+        val idx = animeDetail.episodes.indexOfFirst { it.id == episode.id }
+        if (idx in 0 until animeDetail.episodes.size - 1) animeDetail.episodes[idx + 1] else null
+    }
+    var showNextEpisodeCard by remember(episode.id) { mutableStateOf(false) }
+    var autoplayCountdown by remember(episode.id) { mutableStateOf(5) }
 
     var showServersSheet by remember { mutableStateOf(false) }
 
@@ -168,8 +178,37 @@ fun PlayerScreen(
                                 progressMillis = progress,
                                 durationMillis = duration
                             )
+                        },
+                        onEnded = {
+                            if (nextEpisode != null) {
+                                autoplayCountdown = 5
+                                showNextEpisodeCard = true
+                            }
                         }
                     )
+
+                    // Kartu "Lanjut ke Episode Berikutnya" ala Netflix -- muncul begitu
+                    // episode ini tamat. Kalau autoplay dimatiin di Settings, kartu tetap
+                    // muncul tapi tanpa hitung mundur (user harus tap manual).
+                    if (showNextEpisodeCard && nextEpisode != null) {
+                        if (autoplayEnabled) {
+                            LaunchedEffect(key1 = episode.id) {
+                                while (autoplayCountdown > 0) {
+                                    delay(1000)
+                                    autoplayCountdown -= 1
+                                }
+                                onNextEpisode(nextEpisode)
+                            }
+                        }
+                        NextEpisodeOverlay(
+                            episodeTitle = nextEpisode.title,
+                            autoplayEnabled = autoplayEnabled,
+                            secondsLeft = autoplayCountdown,
+                            onPlayNow = { onNextEpisode(nextEpisode) },
+                            onCancel = { showNextEpisodeCard = false },
+                            modifier = Modifier.align(Alignment.BottomEnd)
+                        )
+                    }
                 }
 
                 // Servers list bottom sheet
@@ -273,6 +312,80 @@ fun PlayerScreen(
 }
 
 @Composable
+fun NextEpisodeOverlay(
+    episodeTitle: String,
+    autoplayEnabled: Boolean,
+    secondsLeft: Int,
+    onPlayNow: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .padding(24.dp)
+            .width(300.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF16161A).copy(alpha = 0.96f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = if (autoplayEnabled) "Lanjut dalam ${secondsLeft}d" else "Episode Selesai",
+                    color = OrangeAccent,
+                    style = Typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(onClick = onCancel, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Batal",
+                        tint = Color.White.copy(alpha = 0.6f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = episodeTitle,
+                color = Color.White,
+                style = Typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(Color.White)
+                    .clickable { onPlayNow() }
+                    .padding(vertical = 10.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Play",
+                    tint = Color.Black,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Putar Sekarang",
+                    color = Color.Black,
+                    style = Typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun EmbedPlayerView(
     embedUrl: String,
     onBack: () -> Unit,
@@ -356,7 +469,8 @@ fun NativePlayerView(
     episodeTitle: String,
     onBack: () -> Unit,
     onShowServers: () -> Unit,
-    onProgressUpdate: (progress: Long, duration: Long) -> Unit
+    onProgressUpdate: (progress: Long, duration: Long) -> Unit,
+    onEnded: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var isPlaying by remember { mutableStateOf(true) }
@@ -398,6 +512,19 @@ fun NativePlayerView(
         player.setMediaItem(mediaItem)
         player.prepare()
         player.play()
+    }
+
+    // Deteksi episode selesai buat trigger autoplay episode berikutnya
+    DisposableEffect(key1 = player) {
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_ENDED) {
+                    onEnded()
+                }
+            }
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
     }
 
     // Progress updates tracking
