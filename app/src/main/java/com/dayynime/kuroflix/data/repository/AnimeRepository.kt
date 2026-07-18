@@ -228,6 +228,47 @@ class AnimeRepository(private val context: Context) {
         emit(homeData)
     }
 
+    // Category browsing: Ongoing / Completed / Movies / Terbaru (Latest) per source.
+    // "movies" gak tersedia di Donghua (API-nya emang gak punya endpoint ini) -> emptyList().
+    fun getCategory(source: String, category: String, page: Int): Flow<List<AnimeItem>> = flow {
+        val list: List<AnimeItem> = when (source.lowercase()) {
+            "animasu" -> when (category) {
+                "ongoing" -> animasuApi.getOngoing(page).animes
+                "completed" -> animasuApi.getCompleted(page).animes
+                "movies" -> animasuApi.getMovies(page).animes
+                "latest" -> animasuApi.getLatest(page).animes
+                else -> null
+            }?.map { it.toAnimeItem() } ?: emptyList()
+
+            "samehadaku" -> when (category) {
+                "ongoing" -> samehadakuApi.getOngoing(page).data?.animeList
+                "completed" -> samehadakuApi.getCompleted(page).data?.animeList
+                "movies" -> samehadakuApi.getMovies(page).data?.animeList
+                "latest" -> samehadakuApi.getRecent(page).data?.animeList
+                else -> null
+            }?.map { it.toAnimeItem() } ?: emptyList()
+
+            "animekompi" -> when (category) {
+                "ongoing" -> animekompiApi.getOngoing(page).data
+                "completed" -> animekompiApi.getCompleted(page).data
+                "movies" -> animekompiApi.getMovies(page).data
+                "latest" -> animekompiApi.getLatest(page).data
+                else -> null
+            }?.map { it.toAnimeItem() } ?: emptyList()
+
+            "donghua" -> when (category) {
+                "ongoing" -> donghuaApi.getOngoing(page).ongoing_donghua?.map { it.toAnimeItem() }
+                "completed" -> donghuaApi.getCompleted(page).completed_donghua?.map { it.toAnimeItem() }
+                "movies" -> emptyList() // Donghua/Anichin gak punya kategori Movie
+                "latest" -> donghuaApi.getLatest(page).latest_donghua?.map { it.toAnimeItem() }
+                else -> null
+            } ?: emptyList()
+
+            else -> emptyList()
+        }
+        emit(list)
+    }
+
     // Detail routing
     fun getDetail(source: String, slug: String): Flow<AnimeDetail> = flow {
         val detail = when (source.lowercase()) {

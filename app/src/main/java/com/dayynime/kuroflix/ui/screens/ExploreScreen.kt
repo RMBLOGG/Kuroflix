@@ -48,6 +48,10 @@ fun ExploreScreen(
     val selectedGenre by viewModel.selectedGenre.collectAsState()
     val genreAnimeList by viewModel.genreAnimeList.collectAsState()
     val homeUiState by viewModel.homeUiState.collectAsState()
+    val selectedSource by viewModel.selectedSource.collectAsState()
+    val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val categoryAnimeList by viewModel.categoryAnimeList.collectAsState()
+    val categoryLoading by viewModel.categoryLoading.collectAsState()
 
     val focusManager = LocalFocusManager.current
 
@@ -64,7 +68,7 @@ fun ExploreScreen(
         ) {
             TextField(
                 value = query,
-                onValueChange = { viewModel.searchQuery.value = it },
+                onValueChange = { viewModel.searchQuery.value = it; if (it.isNotEmpty()) viewModel.selectCategory(null) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
@@ -116,6 +120,49 @@ fun ExploreScreen(
             )
         }
 
+        // Category Tabs: Ongoing / Completed / Movie / Terbaru
+        // "movies" gak ada di Donghua, jadi tab-nya di-disable buat source itu.
+        val categoryTabs = listOf(
+            "ongoing" to "Ongoing",
+            "completed" to "Completed",
+            "movies" to "Movie",
+            "latest" to "Terbaru"
+        )
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(categoryTabs) { (value, label) ->
+                val isActive = selectedCategory == value
+                val isDisabled = value == "movies" && selectedSource == "donghua"
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(if (isActive) FireGradient else Brush.linearGradient(listOf(DarkSurface, DarkSurface)))
+                        .clickable(enabled = !isDisabled) {
+                            viewModel.searchQuery.value = ""
+                            viewModel.selectGenre(null)
+                            viewModel.selectCategory(if (isActive) null else value)
+                        }
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = label,
+                        color = when {
+                            isDisabled -> TextMuted
+                            isActive -> Color.White
+                            else -> TextSecondary
+                        },
+                        style = Typography.labelLarge,
+                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium
+                    )
+                }
+            }
+        }
+
         // Horizontal Genres Filter Bar
         if (genres.isNotEmpty()) {
             LazyRow(
@@ -148,7 +195,7 @@ fun ExploreScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50.dp))
                             .background(if (isActive) FireGradient else Brush.linearGradient(listOf(DarkSurface, DarkSurface)))
-                            .clickable { viewModel.selectGenre(genre) }
+                            .clickable { viewModel.selectCategory(null); viewModel.selectGenre(genre) }
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                         Text(
@@ -169,6 +216,42 @@ fun ExploreScreen(
                 .padding(horizontal = 12.dp)
         ) {
             when {
+                categoryLoading -> {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(12) {
+                            Box(modifier = Modifier.padding(2.dp)) {
+                                ShimmerPosterItem()
+                            }
+                        }
+                    }
+                }
+
+                selectedCategory != null -> {
+                    if (categoryAnimeList.isEmpty()) {
+                        EmptyStateView(
+                            title = if (selectedCategory == "movies" && selectedSource == "donghua")
+                                "Donghua gak punya kategori Movie."
+                            else "Tidak ada hasil untuk kategori ini."
+                        )
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(3),
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(categoryAnimeList) { anime ->
+                                AnimeCard(anime = anime, onClick = { onAnimeClick(anime) })
+                            }
+                        }
+                    }
+                }
+
                 searchLoading -> {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),

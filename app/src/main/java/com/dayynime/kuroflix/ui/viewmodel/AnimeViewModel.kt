@@ -113,6 +113,17 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _genreAnimeList = MutableStateFlow<List<AnimeItem>>(emptyList())
     val genreAnimeList: StateFlow<List<AnimeItem>> = _genreAnimeList.asStateFlow()
 
+    // Category browsing state (Ongoing / Completed / Movie / Terbaru).
+    // null = belum ada tab kategori yang dipilih (default: tampilan Home biasa).
+    private val _selectedCategory = MutableStateFlow<String?>(null)
+    val selectedCategory: StateFlow<String?> = _selectedCategory.asStateFlow()
+
+    private val _categoryAnimeList = MutableStateFlow<List<AnimeItem>>(emptyList())
+    val categoryAnimeList: StateFlow<List<AnimeItem>> = _categoryAnimeList.asStateFlow()
+
+    private val _categoryLoading = MutableStateFlow(false)
+    val categoryLoading: StateFlow<Boolean> = _categoryLoading.asStateFlow()
+
     // Local Data states
     val bookmarks: StateFlow<List<AnimeItem>> = repository.bookmarks
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -135,6 +146,29 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             searchQuery.value = ""
             _selectedGenre.value = null
             _genreAnimeList.value = emptyList()
+            _selectedCategory.value = null
+            _categoryAnimeList.value = emptyList()
+        }
+    }
+
+    fun selectCategory(category: String?) {
+        _selectedCategory.value = category
+        if (category == null) {
+            _categoryAnimeList.value = emptyList()
+            return
+        }
+        viewModelScope.launch {
+            _categoryLoading.value = true
+            _categoryAnimeList.value = emptyList()
+            withContext(Dispatchers.IO) {
+                repository.getCategory(_selectedSource.value, category, page = 1)
+                    .catch { e ->
+                        Log.e("AnimeViewModel", "Error loading category $category", e)
+                        _categoryAnimeList.value = emptyList()
+                    }
+                    .collect { list -> _categoryAnimeList.value = list }
+            }
+            _categoryLoading.value = false
         }
     }
 
