@@ -264,36 +264,20 @@ fun HomeScreen(
                             }
                         }
 
-                        // Section Coming Soon (Akan Tayang - dari jadwal rilis asli)
+                        // Section Jadwal Hari Ini (dari endpoint Schedule yg beneran ada)
                         if (state.upcoming.isNotEmpty()) {
-                        SectionHeader(title = "Akan Tayang")
+                        SectionHeader(title = "Jadwal Hari Ini")
                         LazyRow(
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.padding(bottom = 24.dp)
                         ) {
                             items(state.upcoming.take(10)) { anime ->
-                                Box(modifier = Modifier.graphicsLayer { alpha = 0.6f }) {
-                                    AnimeCard(
-                                        anime = anime,
-                                        onClick = { onAnimeClick(anime) },
-                                        modifier = Modifier.width(135.dp)
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.Center)
-                                            .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
-                                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                                    ) {
-                                        Text(
-                                            text = "Coming Soon",
-                                            color = Color.White,
-                                            style = Typography.labelSmall,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
+                                AnimeCard(
+                                    anime = anime,
+                                    onClick = { onAnimeClick(anime) },
+                                    modifier = Modifier.width(135.dp)
+                                )
                             }
                         }
                         }
