@@ -4,6 +4,8 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.dayynime.kuroflix.data.local.WatchHistoryEntity
 import com.dayynime.kuroflix.data.model.*
 import com.dayynime.kuroflix.data.network.VideoExtractor
@@ -213,16 +215,36 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             var finalEmbedUrl = server.embedUrl
             if (_selectedSource.value == "samehadaku" && !finalEmbedUrl.startsWith("http")) {
                 // If the link is a server ID, fetch the resolved embedUrl from the Samehadaku API
-                val resolvedEmbed = repository.getSamehadakuServerVideo(finalEmbedUrl)
+                val resolvedEmbed = withContext(Dispatchers.IO) {
+                    repository.getSamehadakuServerVideo(finalEmbedUrl)
+                }
                 if (resolvedEmbed.isNotEmpty()) {
                     finalEmbedUrl = resolvedEmbed
                 }
             }
 
             try {
-                // Resolve direct link
-                val referer = "https://www.sankavollerei.com/"
-                val videoSource = VideoExtractor.resolveVideoUrl(finalEmbedUrl, referer, getApplication())
+                // Resolve direct link — WAJIB di Dispatchers.IO karena extractor-extractor
+                // di dalam VideoExtractor (mp4upload, blogger, packed-JS, dst) ngelakuin
+                // blocking network call (OkHttp .execute()) yang bakal crash
+                // NetworkOnMainThreadException kalau dijalanin di Main/viewModelScope
+                // langsung. Sebelum ini di-fix, crash-nya ke-catch diam-diam di dalam
+                // VideoExtractor sendiri, jadi kelihatannya cuma "gagal resolve" biasa
+                // padahal sebenarnya crash thread - makanya SEMUA host yang butuh fetch
+                // HTML gagal, cuma yang punya fast-path (mis. wibufile direct .mp4/.m3u8)
+                // yang lolos karena gak butuh network call sama sekali.
+                // Referer: cuma Samehadaku yang punya domain pasti (persis dari Aniku,
+                // udah kebukti bener). 3 source lain sengaja di-null — VideoExtractor
+                // sendiri per-host udah punya fallback yang lebih akurat (ok.ru/rumble/
+                // blogger hardcode referer-nya sendiri, host lain fallback pakai embedUrl
+                // itu sendiri sebagai referer) daripada nebak domain situs sumber asli.
+                val referer = when (_selectedSource.value) {
+                    "samehadaku" -> "https://v2.samehadaku.how/"
+                    else -> null
+                }
+                val videoSource = withContext(Dispatchers.IO) {
+                    VideoExtractor.resolveVideoUrl(finalEmbedUrl, referer, getApplication())
+                }
                 _playerUiState.value = PlayerUiState.Success(
                     servers = servers,
                     selectedServer = server,
