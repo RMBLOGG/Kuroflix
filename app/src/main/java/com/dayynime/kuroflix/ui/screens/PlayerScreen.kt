@@ -313,11 +313,31 @@ fun NativePlayerView(
     var totalDuration by remember { mutableStateOf(0L) }
     var isControlsVisible by remember { mutableStateOf(true) }
 
-    // Setup ExoPlayer
-    val player = remember {
-        ExoPlayer.Builder(context).build().apply {
-            playWhenReady = true
-        }
+    // Setup ExoPlayer — pakai OkHttpDataSource (bukan DefaultHttpDataSource bawaan)
+    // supaya request streaming manifest/segment ExoPlayer ikut kirim header
+    // Referer/Origin/User-Agent yang sama kayak dipakai VideoExtractor pas resolve,
+    // dan ikut lewat OkHttpClient yang punya fallback DNS-over-HTTPS. Tanpa ini,
+    // kebanyakan host bakal nolak request ExoPlayer (403) walau direct URL-nya
+    // udah bener, karena dianggap request tanpa Referer yang valid.
+    val player = remember(sourceUrl) {
+        val httpDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(
+            com.dayynime.kuroflix.data.network.VideoExtractor.streamingHttpClient
+        ).setDefaultRequestProperties(headers)
+        val dataSourceFactory = androidx.media3.datasource.DefaultDataSource.Factory(context, httpDataSourceFactory)
+        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
+            .setBufferDurationsMs(15_000, 50_000, 2_500, 5_000)
+            .build()
+        ExoPlayer.Builder(context)
+            .setLoadControl(loadControl)
+            .setMediaSourceFactory(
+                if (sourceUrl.contains(".m3u8"))
+                    androidx.media3.exoplayer.hls.HlsMediaSource.Factory(dataSourceFactory)
+                else
+                    androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSourceFactory)
+            )
+            .build().apply {
+                playWhenReady = true
+            }
     }
 
     LaunchedEffect(key1 = sourceUrl) {
