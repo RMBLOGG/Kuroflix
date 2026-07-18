@@ -61,10 +61,28 @@ fun PlayerScreen(
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val activity = context as? android.app.Activity
     val playerState by viewModel.playerUiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
     var showServersSheet by remember { mutableStateOf(false) }
+
+    // Otomatis landscape + fullscreen immersive begitu masuk PlayerScreen,
+    // dan balik ke portrait + system bar normal pas keluar dari screen ini.
+    DisposableEffect(key1 = Unit) {
+        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        activity?.window?.decorView?.systemUiVisibility = (
+            android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
+            android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+            android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        )
+        activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose {
+            activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            activity?.window?.decorView?.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_VISIBLE
+            activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
 
     LaunchedEffect(key1 = episode.id) {
         viewModel.loadVideoSource(episode.id, animeDetail)
