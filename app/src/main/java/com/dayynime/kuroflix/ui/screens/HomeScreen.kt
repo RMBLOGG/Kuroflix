@@ -56,10 +56,10 @@ fun HomeScreen(
     val coroutineScope = rememberCoroutineScope()
 
     val sources = listOf(
-        "animasu" to "Animasu",
-        "samehadaku" to "Samehadaku",
-        "animekompi" to "Animekompi",
-        "donghua" to "Anichin (Donghua)"
+        "animasu" to "Dayynime V1",
+        "samehadaku" to "Dayynime V2",
+        "animekompi" to "Dayynime V3",
+        "donghua" to "Dayynime V4 (Donghua)"
     )
 
     Column(
