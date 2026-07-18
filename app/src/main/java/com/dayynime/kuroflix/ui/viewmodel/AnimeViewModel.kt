@@ -113,6 +113,12 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _genreAnimeList = MutableStateFlow<List<AnimeItem>>(emptyList())
     val genreAnimeList: StateFlow<List<AnimeItem>> = _genreAnimeList.asStateFlow()
 
+    private val _genrePage = MutableStateFlow(1)
+    private val _genreHasNext = MutableStateFlow(false)
+    val genreHasNext: StateFlow<Boolean> = _genreHasNext.asStateFlow()
+    private val _genreLoadingMore = MutableStateFlow(false)
+    val genreLoadingMore: StateFlow<Boolean> = _genreLoadingMore.asStateFlow()
+
     // Category browsing state (Ongoing / Completed / Movie / Terbaru).
     // null = belum ada tab kategori yang dipilih (default: tampilan Home biasa).
     private val _selectedCategory = MutableStateFlow<String?>(null)
@@ -123,6 +129,12 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _categoryLoading = MutableStateFlow(false)
     val categoryLoading: StateFlow<Boolean> = _categoryLoading.asStateFlow()
+
+    private val _categoryPage = MutableStateFlow(1)
+    private val _categoryHasNext = MutableStateFlow(false)
+    val categoryHasNext: StateFlow<Boolean> = _categoryHasNext.asStateFlow()
+    private val _categoryLoadingMore = MutableStateFlow(false)
+    val categoryLoadingMore: StateFlow<Boolean> = _categoryLoadingMore.asStateFlow()
 
     // Local Data states
     val bookmarks: StateFlow<List<AnimeItem>> = repository.bookmarks
@@ -153,6 +165,8 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectCategory(category: String?) {
         _selectedCategory.value = category
+        _categoryPage.value = 1
+        _categoryHasNext.value = false
         if (category == null) {
             _categoryAnimeList.value = emptyList()
             return
@@ -166,9 +180,34 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                         Log.e("AnimeViewModel", "Error loading category $category", e)
                         _categoryAnimeList.value = emptyList()
                     }
-                    .collect { list -> _categoryAnimeList.value = list }
+                    .collect { (items, hasNext) ->
+                        _categoryAnimeList.value = items
+                        _categoryHasNext.value = hasNext
+                    }
             }
             _categoryLoading.value = false
+        }
+    }
+
+    fun loadMoreCategory() {
+        val category = _selectedCategory.value ?: return
+        if (_categoryLoadingMore.value || !_categoryHasNext.value) return
+        viewModelScope.launch {
+            _categoryLoadingMore.value = true
+            val nextPage = _categoryPage.value + 1
+            withContext(Dispatchers.IO) {
+                repository.getCategory(_selectedSource.value, category, page = nextPage)
+                    .catch { e ->
+                        Log.e("AnimeViewModel", "Error loading more category", e)
+                        _categoryHasNext.value = false
+                    }
+                    .collect { (items, hasNext) ->
+                        _categoryAnimeList.value = _categoryAnimeList.value + items
+                        _categoryHasNext.value = hasNext
+                        _categoryPage.value = nextPage
+                    }
+            }
+            _categoryLoadingMore.value = false
         }
     }
 
@@ -204,21 +243,49 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectGenre(genre: GenreItem?) {
         _selectedGenre.value = genre
+        _genrePage.value = 1
+        _genreHasNext.value = false
         if (genre == null) {
             _genreAnimeList.value = emptyList()
             return
         }
         viewModelScope.launch {
             _searchLoading.value = true
-            repository.getGenreAnime(_selectedSource.value, genre.slug)
-                .catch { e ->
-                    Log.e("AnimeViewModel", "Error loading genre anime", e)
-                    _searchLoading.value = false
-                }
-                .collect {
-                    _genreAnimeList.value = it
-                    _searchLoading.value = false
-                }
+            _genreAnimeList.value = emptyList()
+            withContext(Dispatchers.IO) {
+                repository.getGenreAnime(_selectedSource.value, genre.slug, page = 1)
+                    .catch { e ->
+                        Log.e("AnimeViewModel", "Error loading genre anime", e)
+                        _searchLoading.value = false
+                    }
+                    .collect { (items, hasNext) ->
+                        _genreAnimeList.value = items
+                        _genreHasNext.value = hasNext
+                        _searchLoading.value = false
+                    }
+            }
+        }
+    }
+
+    fun loadMoreGenreAnime() {
+        val genre = _selectedGenre.value ?: return
+        if (_genreLoadingMore.value || !_genreHasNext.value) return
+        viewModelScope.launch {
+            _genreLoadingMore.value = true
+            val nextPage = _genrePage.value + 1
+            withContext(Dispatchers.IO) {
+                repository.getGenreAnime(_selectedSource.value, genre.slug, page = nextPage)
+                    .catch { e ->
+                        Log.e("AnimeViewModel", "Error loading more genre anime", e)
+                        _genreHasNext.value = false
+                    }
+                    .collect { (items, hasNext) ->
+                        _genreAnimeList.value = _genreAnimeList.value + items
+                        _genreHasNext.value = hasNext
+                        _genrePage.value = nextPage
+                    }
+            }
+            _genreLoadingMore.value = false
         }
     }
 

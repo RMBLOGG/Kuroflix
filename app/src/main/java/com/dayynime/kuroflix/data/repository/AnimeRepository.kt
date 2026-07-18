@@ -230,43 +230,65 @@ class AnimeRepository(private val context: Context) {
 
     // Category browsing: Ongoing / Completed / Movies / Terbaru (Latest) per source.
     // "movies" gak tersedia di Donghua (API-nya emang gak punya endpoint ini) -> emptyList().
-    fun getCategory(source: String, category: String, page: Int): Flow<List<AnimeItem>> = flow {
-        val list: List<AnimeItem> = when (source.lowercase()) {
-            "animasu" -> when (category) {
-                "ongoing" -> animasuApi.getOngoing(page).animes
-                "completed" -> animasuApi.getCompleted(page).animes
-                "movies" -> animasuApi.getMovies(page).animes
-                "latest" -> animasuApi.getLatest(page).animes
-                else -> null
-            }?.map { it.toAnimeItem() } ?: emptyList()
+    // Return Pair(items, hasNext) buat infinite-scroll pagination di ExploreScreen.
+    fun getCategory(source: String, category: String, page: Int): Flow<Pair<List<AnimeItem>, Boolean>> = flow {
+        val result: Pair<List<AnimeItem>, Boolean> = when (source.lowercase()) {
+            "animasu" -> {
+                val res = when (category) {
+                    "ongoing" -> animasuApi.getOngoing(page)
+                    "completed" -> animasuApi.getCompleted(page)
+                    "movies" -> animasuApi.getMovies(page)
+                    "latest" -> animasuApi.getLatest(page)
+                    else -> null
+                }
+                val items = res?.animes?.map { it.toAnimeItem() } ?: emptyList()
+                val hasNext = res?.pagination?.hasNext ?: items.isNotEmpty()
+                items to hasNext
+            }
 
-            "samehadaku" -> when (category) {
-                "ongoing" -> samehadakuApi.getOngoing(page).data?.animeList
-                "completed" -> samehadakuApi.getCompleted(page).data?.animeList
-                "movies" -> samehadakuApi.getMovies(page).data?.animeList
-                "latest" -> samehadakuApi.getRecent(page).data?.animeList
-                else -> null
-            }?.map { it.toAnimeItem() } ?: emptyList()
+            "samehadaku" -> {
+                val res = when (category) {
+                    "ongoing" -> samehadakuApi.getOngoing(page)
+                    "completed" -> samehadakuApi.getCompleted(page)
+                    "movies" -> samehadakuApi.getMovies(page)
+                    "latest" -> samehadakuApi.getRecent(page)
+                    else -> null
+                }
+                val items = res?.data?.animeList?.map { it.toAnimeItem() } ?: emptyList()
+                val hasNext = res?.pagination?.hasNextPage ?: items.isNotEmpty()
+                items to hasNext
+            }
 
-            "animekompi" -> when (category) {
-                "ongoing" -> animekompiApi.getOngoing(page).data
-                "completed" -> animekompiApi.getCompleted(page).data
-                "movies" -> animekompiApi.getMovies(page).data
-                "latest" -> animekompiApi.getLatest(page).data
-                else -> null
-            }?.map { it.toAnimeItem() } ?: emptyList()
+            "animekompi" -> {
+                val res = when (category) {
+                    "ongoing" -> animekompiApi.getOngoing(page)
+                    "completed" -> animekompiApi.getCompleted(page)
+                    "movies" -> animekompiApi.getMovies(page)
+                    "latest" -> animekompiApi.getLatest(page)
+                    else -> null
+                }
+                val items = res?.data?.map { it.toAnimeItem() } ?: emptyList()
+                val hasNext = res?.pagination?.hasNext ?: items.isNotEmpty()
+                items to hasNext
+            }
 
-            "donghua" -> when (category) {
-                "ongoing" -> donghuaApi.getOngoing(page).ongoing_donghua?.map { it.toAnimeItem() }
-                "completed" -> donghuaApi.getCompleted(page).completed_donghua?.map { it.toAnimeItem() }
-                "movies" -> emptyList() // Donghua/Anichin gak punya kategori Movie
-                "latest" -> donghuaApi.getLatest(page).latest_donghua?.map { it.toAnimeItem() }
-                else -> null
-            } ?: emptyList()
+            "donghua" -> {
+                // API Donghua gak ngasih metadata pagination sama sekali, jadi
+                // fallback: kalau hasil halaman ini gak kosong, anggap masih ada
+                // halaman berikutnya (sama persis fallback yang dipakai Aniku).
+                val items = when (category) {
+                    "ongoing" -> donghuaApi.getOngoing(page).ongoing_donghua?.map { it.toAnimeItem() }
+                    "completed" -> donghuaApi.getCompleted(page).completed_donghua?.map { it.toAnimeItem() }
+                    "movies" -> emptyList() // Donghua/Anichin gak punya kategori Movie
+                    "latest" -> donghuaApi.getLatest(page).latest_donghua?.map { it.toAnimeItem() }
+                    else -> null
+                } ?: emptyList()
+                items to items.isNotEmpty()
+            }
 
-            else -> emptyList()
+            else -> emptyList<AnimeItem>() to false
         }
-        emit(list)
+        emit(result)
     }
 
     // Detail routing
@@ -413,14 +435,26 @@ class AnimeRepository(private val context: Context) {
     }
 
     // Genre anime
-    fun getGenreAnime(source: String, genreSlug: String, page: Int = 1): Flow<List<AnimeItem>> = flow {
-        val list = when (source.lowercase()) {
-            "animasu" -> animasuApi.getGenreAnime(genreSlug, page).animes?.map { it.toAnimeItem() } ?: emptyList()
-            "samehadaku" -> samehadakuApi.getGenreAnime(genreSlug, page).data?.animeList?.map { it.toAnimeItem() } ?: emptyList()
-            "animekompi" -> animekompiApi.getGenreAnime(genreSlug, page).data?.map { it.toAnimeItem() } ?: emptyList()
-            "donghua" -> emptyList()
-            else -> emptyList()
+    fun getGenreAnime(source: String, genreSlug: String, page: Int = 1): Flow<Pair<List<AnimeItem>, Boolean>> = flow {
+        val result: Pair<List<AnimeItem>, Boolean> = when (source.lowercase()) {
+            "animasu" -> {
+                val res = animasuApi.getGenreAnime(genreSlug, page)
+                val items = res.animes?.map { it.toAnimeItem() } ?: emptyList()
+                items to (res.pagination?.hasNext ?: items.isNotEmpty())
+            }
+            "samehadaku" -> {
+                val res = samehadakuApi.getGenreAnime(genreSlug, page)
+                val items = res.data?.animeList?.map { it.toAnimeItem() } ?: emptyList()
+                items to (res.pagination?.hasNextPage ?: items.isNotEmpty())
+            }
+            "animekompi" -> {
+                val res = animekompiApi.getGenreAnime(genreSlug, page)
+                val items = res.data?.map { it.toAnimeItem() } ?: emptyList()
+                items to (res.pagination?.hasNext ?: items.isNotEmpty())
+            }
+            "donghua" -> emptyList<AnimeItem>() to false
+            else -> emptyList<AnimeItem>() to false
         }
-        emit(list)
+        emit(result)
     }
 }

@@ -7,8 +7,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -239,14 +241,42 @@ fun ExploreScreen(
                             else "Tidak ada hasil untuk kategori ini."
                         )
                     } else {
+                        val categoryHasNext by viewModel.categoryHasNext.collectAsState()
+                        val categoryLoadingMore by viewModel.categoryLoadingMore.collectAsState()
+                        val gridState = rememberLazyGridState()
+
+                        LaunchedEffect(gridState, categoryAnimeList.size) {
+                            snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+                                .collect { lastVisible ->
+                                    if (lastVisible != null && lastVisible >= categoryAnimeList.size - 6) {
+                                        viewModel.loadMoreCategory()
+                                    }
+                                }
+                        }
+
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(3),
+                            state = gridState,
                             contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(categoryAnimeList) { anime ->
                                 AnimeCard(anime = anime, onClick = { onAnimeClick(anime) })
+                            }
+                            if (categoryHasNext) {
+                                item(span = { GridItemSpan(3) }) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (categoryLoadingMore) {
+                                            CircularProgressIndicator(color = OrangeAccent, modifier = Modifier.size(28.dp))
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -272,14 +302,42 @@ fun ExploreScreen(
                     if (genreAnimeList.isEmpty()) {
                         EmptyStateView(title = "Tidak ada hasil untuk genre ini.")
                     } else {
+                        val genreHasNext by viewModel.genreHasNext.collectAsState()
+                        val genreLoadingMore by viewModel.genreLoadingMore.collectAsState()
+                        val gridState = rememberLazyGridState()
+
+                        LaunchedEffect(gridState, genreAnimeList.size) {
+                            snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+                                .collect { lastVisible ->
+                                    if (lastVisible != null && lastVisible >= genreAnimeList.size - 6) {
+                                        viewModel.loadMoreGenreAnime()
+                                    }
+                                }
+                        }
+
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(3),
+                            state = gridState,
                             contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(genreAnimeList) { anime ->
                                 AnimeCard(anime = anime, onClick = { onAnimeClick(anime) })
+                            }
+                            if (genreHasNext) {
+                                item(span = { GridItemSpan(3) }) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (genreLoadingMore) {
+                                            CircularProgressIndicator(color = OrangeAccent, modifier = Modifier.size(28.dp))
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

@@ -29,7 +29,15 @@ data class AnimasuHomeResponse(
 @JsonClass(generateAdapter = true)
 data class AnimasuListResponse(
     val status: String? = null,
-    val animes: List<AnimasuItem>? = null
+    val animes: List<AnimasuItem>? = null,
+    val pagination: AnimasuPagination? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AnimasuPagination(
+    val hasNext: Boolean? = null,
+    val hasPrev: Boolean? = null,
+    val currentPage: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -103,7 +111,19 @@ data class SamehadakuHomeResponse(val status: String? = null, val data: Samehada
 data class SamehadakuListData(val animeList: List<SamehadakuItem>? = null)
 
 @JsonClass(generateAdapter = true)
-data class SamehadakuListResponse(val status: String? = null, val data: SamehadakuListData? = null)
+data class SamehadakuListResponse(
+    val status: String? = null,
+    val data: SamehadakuListData? = null,
+    val pagination: SamehadakuPagination? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class SamehadakuPagination(
+    val currentPage: Int? = null,
+    val hasNextPage: Boolean? = null,
+    val hasPrevPage: Boolean? = null,
+    val totalPages: Int? = null
+)
 
 @JsonClass(generateAdapter = true)
 data class SamehadakuGenresData(val genreList: List<SamehadakuGenreRef>? = null)
@@ -189,7 +209,16 @@ data class AnimekompiItem(
 }
 
 @JsonClass(generateAdapter = true)
-data class AnimekompiListResponse(val data: List<AnimekompiItem>? = null)
+data class AnimekompiListResponse(
+    val data: List<AnimekompiItem>? = null,
+    val pagination: AnimekompiPagination? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AnimekompiPagination(
+    @Json(name = "has_next") val hasNext: Boolean? = null,
+    @Json(name = "current_page") val currentPage: Int? = null
+)
 
 @JsonClass(generateAdapter = true)
 data class AnimekompiGenreItem(val name: String? = null, val value: String? = null)
