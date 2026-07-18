@@ -43,6 +43,7 @@ import com.dayynime.kuroflix.ui.viewmodel.AnimeViewModel
 
 sealed class AppRoute {
     object MainShell : AppRoute()
+    object Schedule : AppRoute()
     data class Detail(val animeId: String) : AppRoute()
     data class Player(val episode: EpisodeItem, val animeDetail: AnimeDetail) : AppRoute()
 }
@@ -100,6 +101,7 @@ fun MainScreen(viewModel: AnimeViewModel) {
                                 0 -> HomeScreen(
                                     viewModel = viewModel,
                                     onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id)) },
+                                    onScheduleClick = { navigateTo(AppRoute.Schedule) },
                                     onContinueWatchClick = { historyItem ->
                                         // Load detailed object from historical logs
                                         viewModel.loadDetail(historyItem.animeId.substringAfter(":"))
@@ -174,6 +176,14 @@ fun MainScreen(viewModel: AnimeViewModel) {
                                     .padding(bottom = 24.dp)
                             )
                         }
+                    }
+
+                    is AppRoute.Schedule -> {
+                        ScheduleScreen(
+                            viewModel = viewModel,
+                            onBackClick = { navigateBack() },
+                            onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id)) }
+                        )
                     }
 
                     is AppRoute.Detail -> {

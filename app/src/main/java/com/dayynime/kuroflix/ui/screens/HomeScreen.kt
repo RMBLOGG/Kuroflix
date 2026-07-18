@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -44,7 +45,8 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     viewModel: AnimeViewModel,
     onAnimeClick: (AnimeItem) -> Unit,
-    onContinueWatchClick: (WatchHistoryEntity) -> Unit
+    onContinueWatchClick: (WatchHistoryEntity) -> Unit,
+    onScheduleClick: () -> Unit = {}
 ) {
     val currentSource by viewModel.selectedSource.collectAsState()
     val homeState by viewModel.homeUiState.collectAsState()
@@ -91,10 +93,10 @@ fun HomeScreen(
                         tint = TextPrimary
                     )
                 }
-                IconButton(onClick = { /* No-op */ }) {
+                IconButton(onClick = onScheduleClick) {
                     Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "Notifikasi",
+                        imageVector = Icons.Default.CalendarMonth,
+                        contentDescription = "Jadwal Rilis",
                         tint = TextPrimary
                     )
                 }

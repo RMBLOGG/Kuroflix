@@ -63,6 +63,39 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _availableServers = MutableStateFlow<List<VideoServer>>(emptyList())
     val availableServers: StateFlow<List<VideoServer>> = _availableServers.asStateFlow()
 
+    // Jadwal rilis mingguan
+    private val _scheduleMap = MutableStateFlow<Map<String, List<AnimeItem>>>(emptyMap())
+    val scheduleMap: StateFlow<Map<String, List<AnimeItem>>> = _scheduleMap.asStateFlow()
+    private val _scheduleLoading = MutableStateFlow(false)
+    val scheduleLoading: StateFlow<Boolean> = _scheduleLoading.asStateFlow()
+    private val _selectedDay = MutableStateFlow(
+        // Default: hari ini, biar buka Jadwal langsung nunjukin anime yang tayang hari ini
+        listOf("Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu")[
+            java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) - 1
+        ]
+    )
+    val selectedDay: StateFlow<String> = _selectedDay.asStateFlow()
+
+    fun selectDay(day: String) {
+        _selectedDay.value = day
+    }
+
+    fun loadSchedule() {
+        viewModelScope.launch {
+            _scheduleLoading.value = true
+            withContext(Dispatchers.IO) {
+                repository.getSchedule(_selectedSource.value)
+                    .catch { e ->
+                        Log.e("AnimeViewModel", "Error loading schedule", e)
+                        _scheduleMap.value = emptyMap()
+                    }
+                    .collect { map -> _scheduleMap.value = map }
+            }
+            _scheduleLoading.value = false
+        }
+    }
+
+
     fun loadAvailableServers(animeDetail: AnimeDetail) {
         viewModelScope.launch {
             _availableServers.value = emptyList()

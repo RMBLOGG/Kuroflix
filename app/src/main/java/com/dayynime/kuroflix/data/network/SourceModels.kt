@@ -365,3 +365,58 @@ data class DonghuaEpisodeResponse(
     val episode: String? = null,
     val streaming: DonghuaStreaming? = null
 )
+
+// ================== SCHEDULE (semua sumber) ==================
+
+@JsonClass(generateAdapter = true)
+data class AnimasuScheduleRaw(
+    val minggu: List<AnimasuItem>? = null,
+    val senin: List<AnimasuItem>? = null,
+    val selasa: List<AnimasuItem>? = null,
+    val rabu: List<AnimasuItem>? = null,
+    val kamis: List<AnimasuItem>? = null,
+    @Json(name = "jum'at") val jumat: List<AnimasuItem>? = null,
+    val sabtu: List<AnimasuItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AnimasuScheduleResponse(
+    val status: String? = null,
+    val schedule: AnimasuScheduleRaw? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class SamehadakuScheduleDay(
+    val day: String? = null, // "Sunday".."Saturday" (Inggris)
+    val animeList: List<SamehadakuItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class SamehadakuScheduleData(val days: List<SamehadakuScheduleDay>? = null)
+
+@JsonClass(generateAdapter = true)
+data class SamehadakuScheduleResponse(
+    val status: String? = null,
+    val data: SamehadakuScheduleData? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AnimekompiScheduleDay(
+    val day: String? = null, // "senin".."minggu" (Indonesia, lowercase)
+    val list: List<AnimekompiItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AnimekompiScheduleResponse(val data: List<AnimekompiScheduleDay>? = null)
+
+@JsonClass(generateAdapter = true)
+data class DonghuaScheduleDay(
+    val day: String? = null, // "Sunday".."Saturday" (Inggris)
+    val donghua_list: List<DonghuaBasicItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class DonghuaScheduleResponse(
+    val status: String? = null,
+    val schedule: List<DonghuaScheduleDay>? = null
+)

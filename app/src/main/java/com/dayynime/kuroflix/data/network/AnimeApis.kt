@@ -37,6 +37,9 @@ interface AnimasuApi {
 
     @GET("animasu/episode/{slug}")
     suspend fun getEpisode(@Path("slug") slug: String): AnimasuEpisodeResponse
+
+    @GET("animasu/schedule")
+    suspend fun getSchedule(): AnimasuScheduleResponse
 }
 
 interface SamehadakuApi {
@@ -75,6 +78,9 @@ interface SamehadakuApi {
 
     @GET("samehadaku/server/{serverId}")
     suspend fun getServerVideo(@Path("serverId") serverId: String): SamehadakuServerLinkResponse
+
+    @GET("samehadaku/schedule")
+    suspend fun getSchedule(): SamehadakuScheduleResponse
 }
 
 interface AnimekompiApi {
@@ -110,6 +116,9 @@ interface AnimekompiApi {
 
     @GET("episode/{slug}")
     suspend fun getEpisode(@Path("slug") slug: String): AnimekompiEpisodeResponse
+
+    @GET("schedule")
+    suspend fun getSchedule(): AnimekompiScheduleResponse
 }
 
 interface DonghuaApi {
@@ -136,4 +145,7 @@ interface DonghuaApi {
 
     @GET("donghua/genres")
     suspend fun getGenres(): DonghuaGenresResponse
+
+    @GET("donghua/schedule")
+    suspend fun getSchedule(): DonghuaScheduleResponse
 }

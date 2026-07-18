@@ -231,7 +231,64 @@ class AnimeRepository(private val context: Context) {
     // Category browsing: Ongoing / Completed / Movies / Terbaru (Latest) per source.
     // "movies" gak tersedia di Donghua (API-nya emang gak punya endpoint ini) -> emptyList().
     // Return Pair(items, hasNext) buat infinite-scroll pagination di ExploreScreen.
-    fun getCategory(source: String, category: String, page: Int): Flow<Pair<List<AnimeItem>, Boolean>> = flow {
+    // Jadwal rilis mingguan per source, dinormalisasi jadi Map<NamaHariIndonesia, List<AnimeItem>>
+    // biar UI (ScheduleScreen) gak perlu tau format hari asli tiap API beda-beda
+    // (Animasu pakai Indonesia lowercase, Samehadaku/Donghua pakai Inggris, Animekompi Indonesia lowercase).
+    private val DAY_ORDER = listOf("Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu")
+    private val ENGLISH_TO_INDO = mapOf(
+        "sunday" to "Minggu", "monday" to "Senin", "tuesday" to "Selasa",
+        "wednesday" to "Rabu", "thursday" to "Kamis", "friday" to "Jumat", "saturday" to "Sabtu"
+    )
+    private fun normalizeDay(raw: String?): String {
+        val key = (raw ?: "").trim().lowercase().replace("'", "")
+        ENGLISH_TO_INDO[key]?.let { return it }
+        return when (key) {
+            "minggu" -> "Minggu"; "senin" -> "Senin"; "selasa" -> "Selasa"
+            "rabu" -> "Rabu"; "kamis" -> "Kamis"; "jumat" -> "Jumat"; "sabtu" -> "Sabtu"
+            else -> raw ?: ""
+        }
+    }
+
+    fun getSchedule(source: String): Flow<Map<String, List<AnimeItem>>> = flow {
+        val map = linkedMapOf<String, List<AnimeItem>>().apply {
+            DAY_ORDER.forEach { put(it, emptyList()) }
+        }
+        when (source.lowercase()) {
+            "animasu" -> {
+                val s = animasuApi.getSchedule().schedule
+                if (s != null) {
+                    map["Minggu"] = s.minggu.orEmpty().map { it.toAnimeItem() }
+                    map["Senin"] = s.senin.orEmpty().map { it.toAnimeItem() }
+                    map["Selasa"] = s.selasa.orEmpty().map { it.toAnimeItem() }
+                    map["Rabu"] = s.rabu.orEmpty().map { it.toAnimeItem() }
+                    map["Kamis"] = s.kamis.orEmpty().map { it.toAnimeItem() }
+                    map["Jumat"] = s.jumat.orEmpty().map { it.toAnimeItem() }
+                    map["Sabtu"] = s.sabtu.orEmpty().map { it.toAnimeItem() }
+                }
+            }
+            "samehadaku" -> {
+                samehadakuApi.getSchedule().data?.days.orEmpty().forEach { day ->
+                    val key = normalizeDay(day.day)
+                    map[key] = day.animeList.orEmpty().map { it.toAnimeItem() }
+                }
+            }
+            "animekompi" -> {
+                animekompiApi.getSchedule().data.orEmpty().forEach { day ->
+                    val key = normalizeDay(day.day)
+                    map[key] = day.list.orEmpty().map { it.toAnimeItem() }
+                }
+            }
+            "donghua" -> {
+                donghuaApi.getSchedule().schedule.orEmpty().forEach { day ->
+                    val key = normalizeDay(day.day)
+                    map[key] = day.donghua_list.orEmpty().map { it.toAnimeItem() }
+                }
+            }
+        }
+        emit(map)
+    }
+
+
         val result: Pair<List<AnimeItem>, Boolean> = when (source.lowercase()) {
             "animasu" -> {
                 val res = when (category) {
