@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +32,7 @@ import coil.compose.AsyncImage
 import com.dayynime.kuroflix.data.model.AnimeDetail
 import com.dayynime.kuroflix.data.model.AnimeItem
 import com.dayynime.kuroflix.data.model.EpisodeItem
+import com.dayynime.kuroflix.data.local.PreferredServerOptions
 import com.dayynime.kuroflix.ui.components.DarkOverlayGradient
 import com.dayynime.kuroflix.ui.components.FireGradient
 import com.dayynime.kuroflix.ui.components.GlowButton
@@ -224,6 +226,61 @@ fun DetailScreen(
                                     contentDescription = "Bookmark",
                                     tint = if (isBookmarked) RedAccent else Color.White
                                 )
+                            }
+                        }
+
+                        // Default server streaming — berlaku global lintas 4 sumber data,
+                        // dipakai buat auto-pilih server pas buka episode manapun.
+                        val preferredKeyword by viewModel.preferredServerKeyword.collectAsState()
+                        var serverMenuExpanded by remember { mutableStateOf(false) }
+                        val currentLabel = PreferredServerOptions.ALL
+                            .firstOrNull { it.first == preferredKeyword }?.second
+                            ?: "Otomatis (server pertama)"
+
+                        Box(
+                            modifier = Modifier
+                                .padding(bottom = 12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(DarkSurface)
+                                    .clickable { serverMenuExpanded = true }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = null,
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Server Default: $currentLabel",
+                                    color = TextSecondary,
+                                    style = Typography.labelSmall
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = serverMenuExpanded,
+                                onDismissRequest = { serverMenuExpanded = false },
+                                modifier = Modifier.background(DarkSurface)
+                            ) {
+                                PreferredServerOptions.ALL.forEach { (keyword, label) ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = label,
+                                                color = if (keyword == preferredKeyword) OrangeAccent else Color.White
+                                            )
+                                        },
+                                        onClick = {
+                                            viewModel.setPreferredServer(keyword)
+                                            serverMenuExpanded = false
+                                        }
+                                    )
+                                }
                             }
                         }
 

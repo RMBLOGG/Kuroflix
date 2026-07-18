@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.dayynime.kuroflix.data.local.WatchHistoryEntity
+import com.dayynime.kuroflix.data.local.PreferencesManager
 import com.dayynime.kuroflix.data.model.*
 import com.dayynime.kuroflix.data.network.VideoExtractor
 import com.dayynime.kuroflix.data.repository.AnimeRepository
@@ -44,6 +45,16 @@ sealed interface PlayerUiState {
 
 class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = AnimeRepository(application)
+    private val preferencesManager = PreferencesManager(application)
+
+    // Preferensi default server streaming, GLOBAL lintas 4 sumber data.
+    // "" berarti "Otomatis" (server pertama, behavior lama).
+    val preferredServerKeyword: StateFlow<String> = preferencesManager.preferredServerKeyword
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    fun setPreferredServer(keyword: String) {
+        viewModelScope.launch { preferencesManager.setPreferredServer(keyword) }
+    }
 
     // Current global source selection (animasu, samehadaku, animekompi, donghua)
     private val _selectedSource = MutableStateFlow("animasu")
@@ -201,8 +212,12 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                         _playerUiState.value = PlayerUiState.Error("Tidak ada server video tersedia.")
                         return@collect
                     }
-                    // Select first server as default
-                    selectServer(servers.first(), servers, animeDetail)
+                    // Coba pilih server sesuai preferensi default user (berlaku sama
+                    // di 4 sumber data karena servers udah dinormalisasi jadi VideoServer
+                    // yang seragam). Kalau preferensinya "Otomatis" atau server pilihan
+                    // gak tersedia di episode ini, fallback ke server pertama seperti biasa.
+                    val preferred = preferencesManager.findPreferred(servers, preferredServerKeyword.value)
+                    selectServer(preferred ?: servers.first(), servers, animeDetail)
                 }
         }
     }
