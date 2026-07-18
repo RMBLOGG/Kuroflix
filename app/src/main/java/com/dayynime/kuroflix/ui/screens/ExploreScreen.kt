@@ -55,7 +55,6 @@ fun ExploreScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(DarkBg)
-            .statusBarsPadding()
     ) {
         // Rounded Pill Search Bar
         Box(

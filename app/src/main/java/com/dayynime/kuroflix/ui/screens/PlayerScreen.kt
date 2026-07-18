@@ -258,8 +258,7 @@ fun EmbedPlayerView(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
-                .statusBarsPadding(),
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -398,8 +397,7 @@ fun NativePlayerView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.TopCenter)
-                        .padding(16.dp)
-                        .statusBarsPadding(),
+                        .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -508,7 +506,6 @@ fun NativePlayerView(
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .padding(16.dp)
-                        .navigationBarsPadding()
                 ) {
                     val progressValue = if (totalDuration > 0L) currentPosition.toFloat() / totalDuration.toFloat() else 0f
                     Slider(

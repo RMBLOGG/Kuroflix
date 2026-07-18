@@ -376,7 +376,6 @@ fun DetailScreen(
             onClick = onBackClick,
             modifier = Modifier
                 .padding(start = 16.dp, top = 16.dp)
-                .statusBarsPadding()
                 .size(40.dp)
                 .background(Color.Black.copy(alpha = 0.6f), CircleShape)
         ) {

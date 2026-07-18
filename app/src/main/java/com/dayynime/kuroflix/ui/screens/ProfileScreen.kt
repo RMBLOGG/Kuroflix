@@ -67,7 +67,6 @@ fun ProfileScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(DarkBg)
-            .statusBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(bottom = 100.dp)
     ) {

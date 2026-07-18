@@ -37,7 +37,6 @@ fun BookmarkScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(DarkBg)
-            .statusBarsPadding()
     ) {
         // Standalone Bookmarks Header
         Text(
