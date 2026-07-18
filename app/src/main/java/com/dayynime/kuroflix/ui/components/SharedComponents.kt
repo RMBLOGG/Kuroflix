@@ -123,8 +123,8 @@ fun AnimeCard(
                         isPressed = true
                         tryAwaitRelease()
                         isPressed = false
-                        onClick()
-                    }
+                    },
+                    onTap = { onClick() }
                 )
             },
         shape = RoundedCornerShape(16.dp),
