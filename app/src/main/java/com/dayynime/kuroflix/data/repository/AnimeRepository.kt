@@ -395,15 +395,32 @@ class AnimeRepository(private val context: Context) {
     }
 
     // Search routing
-    fun search(source: String, query: String, page: Int = 1): Flow<List<AnimeItem>> = flow {
-        val list = when (source.lowercase()) {
-            "animasu" -> animasuApi.search(query, page).animes?.map { it.toAnimeItem() } ?: emptyList()
-            "samehadaku" -> samehadakuApi.search(query, page).data?.animeList?.map { it.toAnimeItem() } ?: emptyList()
-            "animekompi" -> animekompiApi.search(query, page).data?.map { it.toAnimeItem() } ?: emptyList()
-            "donghua" -> donghuaApi.search(query).data?.map { it.toAnimeItem() } ?: emptyList()
-            else -> emptyList()
+    fun search(source: String, query: String, page: Int = 1): Flow<Pair<List<AnimeItem>, Boolean>> = flow {
+        val result: Pair<List<AnimeItem>, Boolean> = when (source.lowercase()) {
+            "animasu" -> {
+                val res = animasuApi.search(query, page)
+                val items = res.animes?.map { it.toAnimeItem() } ?: emptyList()
+                items to (res.pagination?.hasNext ?: items.isNotEmpty())
+            }
+            "samehadaku" -> {
+                val res = samehadakuApi.search(query, page)
+                val items = res.data?.animeList?.map { it.toAnimeItem() } ?: emptyList()
+                items to (res.pagination?.hasNextPage ?: items.isNotEmpty())
+            }
+            "animekompi" -> {
+                val res = animekompiApi.search(query, page)
+                val items = res.data?.map { it.toAnimeItem() } ?: emptyList()
+                items to (res.pagination?.hasNext ?: items.isNotEmpty())
+            }
+            // Endpoint search Donghua ("donghua/search/{query}") gak support param page
+            // sama sekali, jadi cuma ada 1 halaman -> hasNext selalu false.
+            "donghua" -> {
+                val items = donghuaApi.search(query).data?.map { it.toAnimeItem() } ?: emptyList()
+                items to false
+            }
+            else -> emptyList<AnimeItem>() to false
         }
-        emit(list)
+        emit(result)
     }
 
     // Genre items

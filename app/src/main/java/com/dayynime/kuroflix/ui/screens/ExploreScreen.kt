@@ -358,14 +358,42 @@ fun ExploreScreen(
                     if (searchResults.isEmpty()) {
                         EmptyStateView(title = "Tidak ada hasil pencarian.")
                     } else {
+                        val searchHasNext by viewModel.searchHasNext.collectAsState()
+                        val searchLoadingMore by viewModel.searchLoadingMore.collectAsState()
+                        val gridState = rememberLazyGridState()
+
+                        LaunchedEffect(gridState, searchResults.size) {
+                            snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+                                .collect { lastVisible ->
+                                    if (lastVisible != null && lastVisible >= searchResults.size - 6) {
+                                        viewModel.loadMoreSearch()
+                                    }
+                                }
+                        }
+
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(3),
+                            state = gridState,
                             contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(searchResults) { anime ->
                                 AnimeCard(anime = anime, onClick = { onAnimeClick(anime) })
+                            }
+                            if (searchHasNext) {
+                                item(span = { GridItemSpan(3) }) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (searchLoadingMore) {
+                                            CircularProgressIndicator(color = OrangeAccent, modifier = Modifier.size(28.dp))
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

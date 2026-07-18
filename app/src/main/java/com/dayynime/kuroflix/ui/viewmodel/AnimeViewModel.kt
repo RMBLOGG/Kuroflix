@@ -103,6 +103,12 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchLoading = MutableStateFlow(false)
     val searchLoading: StateFlow<Boolean> = _searchLoading.asStateFlow()
 
+    private val _searchPage = MutableStateFlow(1)
+    private val _searchHasNext = MutableStateFlow(false)
+    val searchHasNext: StateFlow<Boolean> = _searchHasNext.asStateFlow()
+    private val _searchLoadingMore = MutableStateFlow(false)
+    val searchLoadingMore: StateFlow<Boolean> = _searchLoadingMore.asStateFlow()
+
     // Genre state
     private val _genres = MutableStateFlow<List<GenreItem>>(emptyList())
     val genres: StateFlow<List<GenreItem>> = _genres.asStateFlow()
@@ -316,19 +322,46 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     fun search() {
         val q = searchQuery.value
         if (q.isEmpty()) return
+        _searchPage.value = 1
+        _searchHasNext.value = false
         viewModelScope.launch {
             _searchLoading.value = true
             _selectedGenre.value = null
             _genreAnimeList.value = emptyList()
-            repository.search(_selectedSource.value, q)
-                .catch { e ->
-                    Log.e("AnimeViewModel", "Search error", e)
-                    _searchLoading.value = false
-                }
-                .collect {
-                    _searchResults.value = it
-                    _searchLoading.value = false
-                }
+            withContext(Dispatchers.IO) {
+                repository.search(_selectedSource.value, q, page = 1)
+                    .catch { e ->
+                        Log.e("AnimeViewModel", "Search error", e)
+                        _searchLoading.value = false
+                    }
+                    .collect { (items, hasNext) ->
+                        _searchResults.value = items
+                        _searchHasNext.value = hasNext
+                        _searchLoading.value = false
+                    }
+            }
+        }
+    }
+
+    fun loadMoreSearch() {
+        val q = searchQuery.value
+        if (q.isEmpty() || _searchLoadingMore.value || !_searchHasNext.value) return
+        viewModelScope.launch {
+            _searchLoadingMore.value = true
+            val nextPage = _searchPage.value + 1
+            withContext(Dispatchers.IO) {
+                repository.search(_selectedSource.value, q, page = nextPage)
+                    .catch { e ->
+                        Log.e("AnimeViewModel", "Error loading more search results", e)
+                        _searchHasNext.value = false
+                    }
+                    .collect { (items, hasNext) ->
+                        _searchResults.value = _searchResults.value + items
+                        _searchHasNext.value = hasNext
+                        _searchPage.value = nextPage
+                    }
+            }
+            _searchLoadingMore.value = false
         }
     }
 
