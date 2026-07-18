@@ -303,6 +303,16 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onSearchQueryChanged(newQuery: String) {
+        searchQuery.value = newQuery
+        if (newQuery.isNotEmpty()) {
+            _searchLoading.value = true
+        } else {
+            _searchLoading.value = false
+            _searchResults.value = emptyList()
+        }
+    }
+
     fun search() {
         val q = searchQuery.value
         if (q.isEmpty()) return

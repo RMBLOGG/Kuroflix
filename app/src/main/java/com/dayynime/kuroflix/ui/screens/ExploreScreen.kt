@@ -51,6 +51,16 @@ fun ExploreScreen(
     val genreAnimeList by viewModel.genreAnimeList.collectAsState()
     val homeUiState by viewModel.homeUiState.collectAsState()
     val selectedSource by viewModel.selectedSource.collectAsState()
+
+    // Auto-search begitu user ngetik (kayak Aniku), gak perlu pencet tombol
+    // search di keyboard. Dikasih sedikit debounce (350ms) biar gak nembak API
+    // tiap 1 huruf diketik.
+    LaunchedEffect(query) {
+        if (query.isNotEmpty()) {
+            kotlinx.coroutines.delay(350)
+            viewModel.search()
+        }
+    }
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val categoryAnimeList by viewModel.categoryAnimeList.collectAsState()
     val categoryLoading by viewModel.categoryLoading.collectAsState()
@@ -70,7 +80,7 @@ fun ExploreScreen(
         ) {
             TextField(
                 value = query,
-                onValueChange = { viewModel.searchQuery.value = it; if (it.isNotEmpty()) viewModel.selectCategory(null) },
+                onValueChange = { viewModel.onSearchQueryChanged(it); if (it.isNotEmpty()) viewModel.selectCategory(null) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
@@ -93,7 +103,7 @@ fun ExploreScreen(
                 trailingIcon = {
                     if (query.isNotEmpty()) {
                         IconButton(onClick = {
-                            viewModel.searchQuery.value = ""
+                            viewModel.onSearchQueryChanged("")
                             viewModel.selectGenre(null)
                         }) {
                             Icon(
@@ -145,7 +155,7 @@ fun ExploreScreen(
                         .clip(RoundedCornerShape(50.dp))
                         .background(if (isActive) FireGradient else Brush.linearGradient(listOf(DarkSurface, DarkSurface)))
                         .clickable(enabled = !isDisabled) {
-                            viewModel.searchQuery.value = ""
+                            viewModel.onSearchQueryChanged("")
                             viewModel.selectGenre(null)
                             viewModel.selectCategory(if (isActive) null else value)
                         }
