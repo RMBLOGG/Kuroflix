@@ -215,10 +215,11 @@ class AnimeRepository(private val context: Context) {
                 val res = donghuaApi.getHome(1)
                 val latestRelease = res.latest_release?.map { it.toAnimeItem() } ?: emptyList()
                 val completed = res.completed_donghua?.map { it.toAnimeItem() } ?: emptyList()
+                val ongoing = donghuaApi.getOngoing(1).ongoing_donghua?.map { it.toAnimeItem() } ?: emptyList()
                 HomeData(
                     latest = latestRelease,
                     popular = latestRelease,
-                    ongoing = latestRelease,
+                    ongoing = ongoing,
                     completed = completed,
                     movies = emptyList()
                 )
