@@ -75,16 +75,22 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Kuroflix",
-                style = Typography.displayLarge,
-                fontSize = 28.sp,
-                color = Color.White,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.drawWithContent {
-                    drawContent()
-                }
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Kuro",
+                    style = Typography.displayLarge,
+                    fontSize = 26.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.Black
+                )
+                Text(
+                    text = "flix",
+                    style = Typography.displayLarge,
+                    fontSize = 26.sp,
+                    color = GoldAccent,
+                    fontWeight = FontWeight.Black
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(onClick = { viewModel.loadHome() }) {
                     Icon(
@@ -343,15 +349,17 @@ fun HeroCarousel(
                 ) {
                     Box(
                         modifier = Modifier
-                            .background(FireGradient, RoundedCornerShape(50.dp))
+                            .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(50.dp))
+                            .border(1.dp, GoldAccent.copy(alpha = 0.6f), RoundedCornerShape(50.dp))
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = "POPULER",
-                            color = Color.White,
+                            color = GoldAccent,
                             style = Typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 9.sp
+                            fontSize = 9.sp,
+                            letterSpacing = 1.sp
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))

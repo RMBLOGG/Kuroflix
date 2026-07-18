@@ -39,13 +39,15 @@ fun sourceBadgeLabel(source: String): String = when (source.lowercase()) {
     else -> source.uppercase()
 }
 
-// Beautiful customized gradient brushes
+// Solid warna aksen tunggal -- dibungkus jadi "Brush" biar dipanggil-nya sama persis
+// kayak sebelumnya (gak perlu ubah tiap tempat pemakaian), tapi visualnya polos,
+// bukan gradient pelangi.
 val FireGradient = Brush.linearGradient(
-    colors = listOf(OrangeAccent, RedAccent, PurpleAccent)
+    colors = listOf(GoldAccent, GoldAccent)
 )
 
 val NeonGradient = Brush.linearGradient(
-    colors = listOf(NeonBlue, NeonPurple)
+    colors = listOf(GoldAccent, GoldAccent)
 )
 
 val DarkOverlayGradient = Brush.verticalGradient(

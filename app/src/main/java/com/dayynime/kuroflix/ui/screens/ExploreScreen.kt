@@ -72,6 +72,28 @@ fun ExploreScreen(
             .fillMaxSize()
             .background(DarkBg)
     ) {
+        // Hero heading, mirip referensi "What you are looking for?" -- cuma
+        // muncul selagi belum ada query yang diketik, ilang begitu user mulai cari.
+        AnimatedVisibility(visible = query.isEmpty()) {
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                Text(
+                    text = "Lagi cari apa?",
+                    color = Color.White,
+                    style = Typography.displayLarge,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Black,
+                    lineHeight = 34.sp
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Temukan anime & donghua favoritmu dari lebih 10.000 judul",
+                    color = TextSecondary,
+                    style = Typography.bodyMedium,
+                    lineHeight = 18.sp
+                )
+            }
+        }
+
         // Rounded Pill Search Bar
         Box(
             modifier = Modifier
@@ -403,11 +425,11 @@ fun ExploreScreen(
                     // Empty state dashboard (Shows popular from home as recommendation)
                     Column(modifier = Modifier.fillMaxSize()) {
                         Text(
-                            text = "Mau nonton apa hari ini?",
+                            text = "Anime Terpopuler",
                             color = Color.White,
                             style = Typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 12.dp)
+                            modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 12.dp)
                         )
 
                         when (val state = homeUiState) {

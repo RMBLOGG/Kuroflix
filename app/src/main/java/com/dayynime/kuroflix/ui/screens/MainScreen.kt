@@ -227,12 +227,12 @@ fun FloatingBottomNavigation(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp)
-            .height(72.dp)
-            .clip(RoundedCornerShape(36.dp))
-            .background(DarkSurface.copy(alpha = 0.92f))
-            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(36.dp))
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = 28.dp)
+            .height(64.dp)
+            .clip(RoundedCornerShape(32.dp))
+            .background(DarkSurface)
+            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(32.dp))
+            .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -243,12 +243,12 @@ fun FloatingBottomNavigation(
             items.forEachIndexed { index, item ->
                 val isActive = selectedTab == index
                 val scale by animateFloatAsState(
-                    targetValue = if (isActive) 1.1f else 1f,
-                    animationSpec = spring(dampingRatio = 0.6f),
+                    targetValue = if (isActive) 1f else 0.94f,
+                    animationSpec = spring(dampingRatio = 0.7f),
                     label = "icon_scale"
                 )
 
-                Column(
+                Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -256,39 +256,23 @@ fun FloatingBottomNavigation(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) { onTabSelected(index) },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                    contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
                             .scale(scale)
-                            .size(42.dp),
+                            .size(if (isActive) 40.dp else 34.dp)
+                            .clip(CircleShape)
+                            .background(if (isActive) Color.White else Color.Transparent),
                         contentAlignment = Alignment.Center
                     ) {
-                        // Background blob indicator with sliding transition morph
-                        if (isActive) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape)
-                                    .background(OrangeAccent.copy(alpha = 0.25f))
-                            )
-                        }
-
                         Icon(
                             imageVector = if (isActive) item.activeIcon else item.inactiveIcon,
                             contentDescription = item.title,
-                            tint = if (isActive) OrangeAccent else TextSecondary,
-                            modifier = Modifier.size(24.dp)
+                            tint = if (isActive) Color.Black else TextSecondary,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = item.title,
-                        color = if (isActive) Color.White else TextSecondary,
-                        fontSize = 10.sp,
-                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium
-                    )
                 }
             }
         }

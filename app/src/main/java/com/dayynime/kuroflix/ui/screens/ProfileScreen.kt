@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -63,6 +64,8 @@ fun ProfileScreen(
 
     var showClearHistoryDialog by remember { mutableStateOf(false) }
 
+    val backdropImage = bookmarks.firstOrNull()?.thumbnail ?: historyList.firstOrNull()?.thumbnail
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -70,134 +73,117 @@ fun ProfileScreen(
             .verticalScroll(rememberScrollState())
             .padding(bottom = 100.dp)
     ) {
-        // Simple avatar profile banner
-        Column(
+        // Banner backdrop dengan avatar overlap -- ala reference: gambar besar di atas,
+        // avatar bulat "menembus" garis bawah banner, nama + handle + stat di bawahnya.
+        // Semua ditaruh dalam satu Box (tinggi tetap) biar overlap-nya rapi tanpa
+        // ninggalin ruang kosong ke elemen berikutnya.
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .height(320.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(90.dp)
-                    .clip(CircleShape)
-                    .background(FireGradient)
-                    .padding(3.dp),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .height(190.dp)
+                    .align(Alignment.TopCenter)
             ) {
+                if (backdropImage != null) {
+                    AsyncImage(
+                        model = backdropImage,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize().background(DarkSurfaceVariant))
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.35f),
+                                    DarkBg
+                                )
+                            )
+                        )
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(88.dp)
                         .clip(CircleShape)
-                        .background(DarkSurface),
+                        .background(DarkBg)
+                        .padding(4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "KF",
-                        color = Color.White,
-                        style = Typography.displayLarge,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Black
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(DarkSurface)
+                            .border(2.dp, GoldAccent, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "KF",
+                            color = Color.White,
+                            style = Typography.displayLarge,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
                 }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "Kuroflix User",
-                color = Color.White,
-                style = Typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "My Offline Library",
-                color = TextSecondary,
-                style = Typography.labelSmall
-            )
-        }
-
-        // Statistics Cards Row with animated counts
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Card(
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = animatedAnimeCount.toString(),
-                        color = OrangeAccent,
-                        style = Typography.displayLarge,
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Anime Ditonton",
-                        color = TextSecondary,
-                        style = Typography.labelSmall
-                    )
-                }
-            }
-
-            Card(
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = animatedEpisodeCount.toString(),
-                        color = OrangeAccent,
-                        style = Typography.displayLarge,
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Episode Selesai",
-                        color = TextSecondary,
-                        style = Typography.labelSmall
-                    )
-                }
-            }
-        }
-
-        // Section Bookmark Saya
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 28.dp, bottom = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = "Bookmark",
-                    tint = RedAccent,
-                    modifier = Modifier.size(20.dp)
-                )
+                Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = "Bookmark Saya",
+                    text = "Kuroflix User",
                     color = Color.White,
                     style = Typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+                Text(
+                    text = "@kuroflix",
+                    color = GoldAccent,
+                    style = Typography.labelSmall
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Stat row -- mirip layout followers/watched/following di referensi
+                Row(
+                    modifier = Modifier.fillMaxWidth(0.85f),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    ProfileStat(value = bookmarks.size.toString(), label = "Bookmark")
+                    ProfileStat(value = animatedAnimeCount.toString(), label = "Anime Watch")
+                    ProfileStat(value = animatedEpisodeCount.toString(), label = "Episode")
+                }
             }
+        }
+
+        // Section Bookmark Saya (styled as "Favorite Shows" a la referensi)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Favorite Shows",
+                color = Color.White,
+                style = Typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
             Text(
                 text = "${bookmarks.size} Anime",
                 color = TextSecondary,
@@ -362,6 +348,26 @@ fun ProfileScreen(
             containerColor = DarkSurface,
             titleContentColor = Color.White,
             textContentColor = TextSecondary
+        )
+    }
+}
+
+@Composable
+fun ProfileStat(value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value,
+            color = Color.White,
+            style = Typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            color = TextSecondary,
+            style = Typography.labelSmall,
+            fontSize = 11.sp
         )
     }
 }
