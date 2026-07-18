@@ -31,6 +31,14 @@ import coil.compose.AsyncImage
 import com.dayynime.kuroflix.data.model.AnimeItem
 import com.dayynime.kuroflix.ui.theme.*
 
+fun sourceBadgeLabel(source: String): String = when (source.lowercase()) {
+    "animasu" -> "V1"
+    "samehadaku" -> "V2"
+    "animekompi" -> "V3"
+    "donghua" -> "V4"
+    else -> source.uppercase()
+}
+
 // Beautiful customized gradient brushes
 val FireGradient = Brush.linearGradient(
     colors = listOf(OrangeAccent, RedAccent, PurpleAccent)
@@ -180,7 +188,7 @@ fun AnimeCard(
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = anime.source.uppercase(),
+                        text = sourceBadgeLabel(anime.source),
                         color = NeonBlue,
                         style = Typography.labelSmall,
                         fontSize = 8.sp,
