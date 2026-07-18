@@ -222,7 +222,7 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 // Resolve direct link
                 val referer = "https://www.sankavollerei.com/"
-                val videoSource = VideoExtractor.resolveVideoUrl(finalEmbedUrl, referer)
+                val videoSource = VideoExtractor.resolveVideoUrl(finalEmbedUrl, referer, getApplication())
                 _playerUiState.value = PlayerUiState.Success(
                     servers = servers,
                     selectedServer = server,
