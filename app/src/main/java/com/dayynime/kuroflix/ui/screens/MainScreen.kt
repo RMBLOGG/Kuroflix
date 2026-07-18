@@ -1,0 +1,292 @@
+package com.dayynime.kuroflix.ui.screens
+
+import androidx.compose.animation.*
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.dayynime.kuroflix.data.local.WatchHistoryEntity
+import com.dayynime.kuroflix.data.model.AnimeDetail
+import com.dayynime.kuroflix.data.model.AnimeItem
+import com.dayynime.kuroflix.data.model.EpisodeItem
+import com.dayynime.kuroflix.ui.components.FireGradient
+import com.dayynime.kuroflix.ui.components.NeonGradient
+import com.dayynime.kuroflix.ui.theme.DarkBg
+import com.dayynime.kuroflix.ui.theme.DarkSurface
+import com.dayynime.kuroflix.ui.theme.OrangeAccent
+import com.dayynime.kuroflix.ui.theme.TextSecondary
+import com.dayynime.kuroflix.ui.viewmodel.AnimeViewModel
+
+sealed class AppRoute {
+    object MainShell : AppRoute()
+    data class Detail(val animeId: String) : AppRoute()
+    data class Player(val episode: EpisodeItem, val animeDetail: AnimeDetail) : AppRoute()
+}
+
+@Composable
+fun MainScreen(viewModel: AnimeViewModel) {
+    var currentRoute by remember { mutableStateOf<AppRoute>(AppRoute.MainShell) }
+    var selectedTab by remember { mutableStateOf(0) }
+
+    // Navigation Stack for back routing
+    val navigationStack = remember { mutableStateListOf<AppRoute>() }
+
+    fun navigateTo(route: AppRoute) {
+        navigationStack.add(currentRoute)
+        currentRoute = route
+    }
+
+    fun navigateBack() {
+        if (navigationStack.isNotEmpty()) {
+            currentRoute = navigationStack.removeAt(navigationStack.size - 1)
+        } else if (currentRoute != AppRoute.MainShell) {
+            currentRoute = AppRoute.MainShell
+        }
+    }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = DarkBg
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            // Screen router animations
+            AnimatedContent(
+                targetState = currentRoute,
+                transitionSpec = {
+                    slideInHorizontally(
+                        animationSpec = tween(350),
+                        initialOffsetX = { fullWidth -> fullWidth }
+                    ) + fadeIn(tween(250)) togetherWith
+                            slideOutHorizontally(
+                                animationSpec = tween(350),
+                                targetOffsetX = { fullWidth -> -fullWidth }
+                            ) + fadeOut(tween(250))
+                },
+                label = "route_transition"
+            ) { route ->
+                when (route) {
+                    is AppRoute.MainShell -> {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            // Render active tab inside the Main shell
+                            when (selectedTab) {
+                                0 -> HomeScreen(
+                                    viewModel = viewModel,
+                                    onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id)) },
+                                    onContinueWatchClick = { historyItem ->
+                                        // Load detailed object from historical logs
+                                        viewModel.loadDetail(historyItem.animeId.substringAfter(":"))
+                                        // Fallback mapped detailed anime reference
+                                        val mappedDetail = AnimeDetail(
+                                            id = historyItem.animeId.substringAfter(":"),
+                                            title = historyItem.animeTitle,
+                                            description = "",
+                                            thumbnail = historyItem.thumbnail,
+                                            rating = "",
+                                            status = "",
+                                            type = "",
+                                            genres = emptyList(),
+                                            episodes = emptyList(),
+                                            source = historyItem.source
+                                        )
+                                        val mappedEpisode = EpisodeItem(
+                                            id = historyItem.episodeId.substringAfter(":"),
+                                            title = historyItem.episodeTitle,
+                                            number = "",
+                                            date = "",
+                                            source = historyItem.source
+                                        )
+                                        navigateTo(AppRoute.Player(mappedEpisode, mappedDetail))
+                                    }
+                                )
+
+                                1 -> ExploreScreen(
+                                    viewModel = viewModel,
+                                    onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id)) }
+                                )
+
+                                2 -> BookmarkScreen(
+                                    viewModel = viewModel,
+                                    onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id)) }
+                                )
+
+                                3 -> ProfileScreen(
+                                    viewModel = viewModel,
+                                    onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id)) },
+                                    onHistoryClick = { historyItem ->
+                                        val mappedDetail = AnimeDetail(
+                                            id = historyItem.animeId.substringAfter(":"),
+                                            title = historyItem.animeTitle,
+                                            description = "",
+                                            thumbnail = historyItem.thumbnail,
+                                            rating = "",
+                                            status = "",
+                                            type = "",
+                                            genres = emptyList(),
+                                            episodes = emptyList(),
+                                            source = historyItem.source
+                                        )
+                                        val mappedEpisode = EpisodeItem(
+                                            id = historyItem.episodeId.substringAfter(":"),
+                                            title = historyItem.episodeTitle,
+                                            number = "",
+                                            date = "",
+                                            source = historyItem.source
+                                        )
+                                        navigateTo(AppRoute.Player(mappedEpisode, mappedDetail))
+                                    }
+                                )
+                            }
+
+                            // Custom Floating pill bottom navigation bar
+                            FloatingBottomNavigation(
+                                selectedTab = selectedTab,
+                                onTabSelected = { selectedTab = it },
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 24.dp)
+                            )
+                        }
+                    }
+
+                    is AppRoute.Detail -> {
+                        DetailScreen(
+                            animeId = route.animeId,
+                            viewModel = viewModel,
+                            onBackClick = { navigateBack() },
+                            onEpisodeClick = { episode, detail ->
+                                navigateTo(AppRoute.Player(episode, detail))
+                            }
+                        )
+                    }
+
+                    is AppRoute.Player -> {
+                        PlayerScreen(
+                            episode = route.episode,
+                            animeDetail = route.animeDetail,
+                            viewModel = viewModel,
+                            onBackClick = { navigateBack() }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FloatingBottomNavigation(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val items = listOf(
+        NavigationItem("Home", Icons.Default.Home, Icons.Outlined.Home),
+        NavigationItem("Explore", Icons.Default.Explore, Icons.Outlined.Explore),
+        NavigationItem("Bookmark", Icons.Default.Favorite, Icons.Outlined.FavoriteBorder),
+        NavigationItem("Profile", Icons.Default.Person, Icons.Outlined.Person)
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .height(72.dp)
+            .clip(RoundedCornerShape(36.dp))
+            .background(DarkSurface.copy(alpha = 0.92f))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(36.dp))
+            .padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            items.forEachIndexed { index, item ->
+                val isActive = selectedTab == index
+                val scale by animateFloatAsState(
+                    targetValue = if (isActive) 1.1f else 1f,
+                    animationSpec = spring(dampingRatio = 0.6f),
+                    label = "icon_scale"
+                )
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onTabSelected(index) },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .scale(scale)
+                            .size(42.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Background blob indicator with sliding transition morph
+                        if (isActive) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                                    .background(OrangeAccent.copy(alpha = 0.25f))
+                            )
+                        }
+
+                        Icon(
+                            imageVector = if (isActive) item.activeIcon else item.inactiveIcon,
+                            contentDescription = item.title,
+                            tint = if (isActive) OrangeAccent else TextSecondary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = item.title,
+                        color = if (isActive) Color.White else TextSecondary,
+                        fontSize = 10.sp,
+                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium
+                    )
+                }
+            }
+        }
+    }
+}
+
+data class NavigationItem(
+    val title: String,
+    val activeIcon: ImageVector,
+    val inactiveIcon: ImageVector
+)

@@ -1,0 +1,6 @@
+{
+  "name": "Kuroflix",
+  "description": "Streaming anime and donghua locally with Material 3 Dark theme.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
