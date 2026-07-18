@@ -1120,6 +1120,43 @@ object VideoExtractor {
     }
 
     // -----------------------------------------------------------------
+    // -----------------------------------------------------------------
+    // Deteksi CEPAT (tanpa network call) apakah sebuah embed URL host-nya
+    // termasuk yang extractor-nya udah ada di atas (kemungkinan besar jadi
+    // ExoPlayer), atau bukan (kemungkinan besar bakal fallback ke WebView
+    // embed mentah). Dipakai buat kasih badge rekomendasi di UI pilihan
+    // server, BUKAN jaminan 100% - tetap bisa gagal kalau resolve HTML-nya
+    // gak nemu match sama sekali pas beneran dijalanin.
+    // -----------------------------------------------------------------
+    private val KNOWN_EXTRACTABLE_HOSTS = listOf(
+        "mp4upload", "streamtape", "pixeldrain", "mediafire", "filedon",
+        "blogger", "blogspot", "filemoon", "vidhide", "wibufile", "streamhide",
+        "moviesm4u", "ztreamhub", "guccihide", "anichin.stream", "gdriveplayer",
+        "rumble", "ok.ru", "dailymotion", "dai.ly", "abyssplayer", "abyss.to"
+    )
+
+    fun isLikelyExoPlayer(embedUrlOrLabel: String): Boolean {
+        // Fast-path: link yang udah langsung file video (mis. s0.wibufile.com/.../video.mp4)
+        if (Regex("""\.(mp4|m3u8|ts)(\?|$)""").containsMatchIn(embedUrlOrLabel)) return true
+        val host = try {
+            java.net.URI(embedUrlOrLabel).host?.lowercase() ?: return checkLabelHints(embedUrlOrLabel)
+        } catch (e: Exception) {
+            return checkLabelHints(embedUrlOrLabel)
+        }
+        return KNOWN_EXTRACTABLE_HOSTS.any { host.contains(it) }
+    }
+
+    // Kalau embedUrl-nya bukan URL beneran (mis. Samehadaku yang cuma ngasih
+    // serverId sebelum di-resolve), coba tebak dari teks label server-nya sendiri
+    // (nama server dari API kadang udah nyebutin host-nya, mis. "Mp4Upload - 720p").
+    private fun checkLabelHints(label: String): Boolean {
+        val lower = label.lowercase()
+        // Sinyal negatif eksplisit dari API sendiri (mis. "[Pakai Google Chrome]"
+        // buat Blogger/Google Drive yang emang butuh WebView + cookie Google).
+        if (lower.contains("chrome") || lower.contains("google drive")) return false
+        return KNOWN_EXTRACTABLE_HOSTS.any { lower.contains(it) }
+    }
+
     // COMPAT LAYER buat Kuroflix: mempertahankan signature lama
     // `resolveVideoUrl(embedUrl, referer): VideoSource` yang dipanggil
     // AnimeViewModel, tapi di dalemnya udah lewat `resolve()` versi Aniku

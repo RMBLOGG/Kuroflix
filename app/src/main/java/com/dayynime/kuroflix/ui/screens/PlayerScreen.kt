@@ -193,8 +193,15 @@ fun PlayerScreen(
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
 
-                            state.servers.forEach { server ->
+                            state.servers
+                                .sortedByDescending {
+                                    com.dayynime.kuroflix.data.network.VideoExtractor
+                                        .isLikelyExoPlayer("${it.name} ${it.embedUrl}")
+                                }
+                                .forEach { server ->
                                 val isSelected = state.selectedServer?.name == server.name
+                                val isExo = com.dayynime.kuroflix.data.network.VideoExtractor
+                                    .isLikelyExoPlayer("${server.name} ${server.embedUrl}")
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -215,12 +222,29 @@ fun PlayerScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            text = server.name,
-                                            color = if (isSelected) OrangeAccent else Color.White,
-                                            style = Typography.bodyLarge,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = server.name,
+                                                color = if (isSelected) OrangeAccent else Color.White,
+                                                style = Typography.bodyLarge,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(50))
+                                                    .background(if (isExo) Color(0xFF1B5E20) else Color(0xFF5D4037))
+                                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                                            ) {
+                                                Text(
+                                                    text = if (isExo) "▶ ExoPlayer" else "🌐 WebView",
+                                                    color = Color.White,
+                                                    style = Typography.labelSmall
+                                                )
+                                            }
+                                        }
                                         if (isSelected) {
                                             Icon(
                                                 imageVector = Icons.Default.Check,

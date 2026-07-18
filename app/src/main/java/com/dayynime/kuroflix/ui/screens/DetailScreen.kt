@@ -240,7 +240,7 @@ fun DetailScreen(
                         val availableServers by viewModel.availableServers.collectAsState()
                         var serverMenuExpanded by remember { mutableStateOf(false) }
                         val currentLabel = if (preferredKeyword.isBlank()) {
-                            "Otomatis (server pertama)"
+                            "Otomatis (prioritas ExoPlayer)"
                         } else {
                             availableServers.firstOrNull { it.name.contains(preferredKeyword, ignoreCase = true) }?.name
                                 ?: preferredKeyword
@@ -280,7 +280,7 @@ fun DetailScreen(
                                 DropdownMenuItem(
                                     text = {
                                         Text(
-                                            text = "Otomatis (server pertama)",
+                                            text = "Otomatis (prioritas ExoPlayer)",
                                             color = if (preferredKeyword.isBlank()) OrangeAccent else Color.White
                                         )
                                     },
@@ -289,21 +289,45 @@ fun DetailScreen(
                                         serverMenuExpanded = false
                                     }
                                 )
-                                availableServers.forEach { server ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = server.name,
-                                                color = if (server.name.contains(preferredKeyword, ignoreCase = true) && preferredKeyword.isNotBlank())
-                                                    OrangeAccent else Color.White
-                                            )
-                                        },
-                                        onClick = {
-                                            viewModel.setPreferredServer(server.name)
-                                            serverMenuExpanded = false
-                                        }
-                                    )
-                                }
+                                availableServers
+                                    .sortedByDescending {
+                                        com.dayynime.kuroflix.data.network.VideoExtractor
+                                            .isLikelyExoPlayer("${it.name} ${it.embedUrl}")
+                                    }
+                                    .forEach { server ->
+                                        val isExo = com.dayynime.kuroflix.data.network.VideoExtractor
+                                            .isLikelyExoPlayer("${server.name} ${server.embedUrl}")
+                                        DropdownMenuItem(
+                                            text = {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    Text(
+                                                        text = server.name,
+                                                        color = if (server.name.contains(preferredKeyword, ignoreCase = true) && preferredKeyword.isNotBlank())
+                                                            OrangeAccent else Color.White
+                                                    )
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(50))
+                                                            .background(if (isExo) Color(0xFF1B5E20) else Color(0xFF5D4037))
+                                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = if (isExo) "▶ ExoPlayer" else "🌐 WebView",
+                                                            color = Color.White,
+                                                            style = Typography.labelSmall
+                                                        )
+                                                    }
+                                                }
+                                            },
+                                            onClick = {
+                                                viewModel.setPreferredServer(server.name)
+                                                serverMenuExpanded = false
+                                            }
+                                        )
+                                    }
                             }
                         }
 
