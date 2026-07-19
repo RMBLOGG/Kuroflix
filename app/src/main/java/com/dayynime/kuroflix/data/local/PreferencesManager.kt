@@ -144,4 +144,16 @@ class PreferencesManager(private val context: Context) {
             prefs.remove(AUTH_USER_AVATAR_KEY)
         }
     }
+
+    // ==================== Onboarding (intro pertama install) ====================
+    private val HAS_SEEN_ONBOARDING_KEY = booleanPreferencesKey("has_seen_onboarding")
+
+    val hasSeenOnboarding: Flow<Boolean> = context.settingsDataStore.data
+        .map { prefs -> prefs[HAS_SEEN_ONBOARDING_KEY] ?: false }
+
+    suspend fun setHasSeenOnboarding(seen: Boolean) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[HAS_SEEN_ONBOARDING_KEY] = seen
+        }
+    }
 }

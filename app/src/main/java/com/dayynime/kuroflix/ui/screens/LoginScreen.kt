@@ -33,7 +33,8 @@ import kotlinx.coroutines.launch
 fun LoginScreen(
     viewModel: AnimeViewModel,
     onBackClick: () -> Unit,
-    onLoggedIn: () -> Unit
+    onLoggedIn: () -> Unit,
+    allowSkip: Boolean = true
 ) {
     val context = LocalContext.current
     val authState by viewModel.authState.collectAsState()
@@ -133,8 +134,10 @@ fun LoginScreen(
                     )
                 }
 
-                TextButton(onClick = onBackClick) {
-                    Text(text = "Nanti saja", color = TextSecondary)
+                if (allowSkip) {
+                    TextButton(onClick = onBackClick) {
+                        Text(text = "Nanti saja", color = TextSecondary)
+                    }
                 }
             }
         }

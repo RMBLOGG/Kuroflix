@@ -42,6 +42,7 @@ import com.dayynime.kuroflix.ui.theme.DarkSurface
 import com.dayynime.kuroflix.ui.theme.OrangeAccent
 import com.dayynime.kuroflix.ui.theme.TextSecondary
 import com.dayynime.kuroflix.ui.viewmodel.AnimeViewModel
+import com.dayynime.kuroflix.ui.viewmodel.AuthUiState
 
 sealed class AppRoute {
     object MainShell : AppRoute()
@@ -54,6 +55,32 @@ sealed class AppRoute {
 
 @Composable
 fun MainScreen(viewModel: AnimeViewModel) {
+    val hasSeenOnboarding by viewModel.hasSeenOnboarding.collectAsState()
+    val authState by viewModel.authState.collectAsState()
+
+    // Gate paling luar: tampilin intro dulu (sekali seumur install), lalu wajib
+    // login sebelum masuk ke app. Urutan: Checking sesi -> Onboarding (kalau
+    // belum pernah) -> Login (wajib, kalau belum login) -> baru app utama.
+    when {
+        hasSeenOnboarding == null || authState is AuthUiState.Checking -> {
+            Box(modifier = Modifier.fillMaxSize().background(DarkBg))
+            return
+        }
+        hasSeenOnboarding == false -> {
+            OnboardingScreen(onFinish = { viewModel.setOnboardingSeen() })
+            return
+        }
+        authState !is AuthUiState.LoggedIn -> {
+            LoginScreen(
+                viewModel = viewModel,
+                onBackClick = {},
+                onLoggedIn = {},
+                allowSkip = false
+            )
+            return
+        }
+    }
+
     var currentRoute by remember { mutableStateOf<AppRoute>(AppRoute.MainShell) }
     var selectedTab by remember { mutableStateOf(0) }
 

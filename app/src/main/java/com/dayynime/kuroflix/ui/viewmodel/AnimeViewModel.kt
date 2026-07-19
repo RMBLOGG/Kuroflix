@@ -55,6 +55,7 @@ data class LoggedInUser(
 )
 
 sealed interface AuthUiState {
+    object Checking : AuthUiState
     object LoggedOut : AuthUiState
     object Loading : AuthUiState
     data class LoggedIn(val user: LoggedInUser) : AuthUiState
@@ -68,8 +69,15 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
     // ==================== Auth (Google via Supabase self-hosted) ====================
 
-    private val _authState = MutableStateFlow<AuthUiState>(AuthUiState.LoggedOut)
+    private val _authState = MutableStateFlow<AuthUiState>(AuthUiState.Checking)
     val authState: StateFlow<AuthUiState> = _authState.asStateFlow()
+
+    val hasSeenOnboarding: StateFlow<Boolean?> = preferencesManager.hasSeenOnboarding
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    fun setOnboardingSeen() {
+        viewModelScope.launch { preferencesManager.setHasSeenOnboarding(true) }
+    }
 
     init {
         // Coba pulihkan sesi login yang tersimpan pas app dibuka lagi.
@@ -82,6 +90,8 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                 // Refresh token di background biar access_token gak keburu expired
                 // pas dipakai buat request pertama.
                 refreshSessionIfNeeded(session.refreshToken)
+            } else {
+                _authState.value = AuthUiState.LoggedOut
             }
         }
     }
