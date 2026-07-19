@@ -3,6 +3,7 @@ package com.dayynime.kuroflix.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -58,12 +59,19 @@ fun MainScreen(viewModel: AnimeViewModel) {
     // Navigation Stack for back routing
     val navigationStack = remember { mutableStateListOf<AppRoute>() }
 
+    // Arah transisi terakhir -- dipakai AnimatedContent di bawah biar "maju" (push,
+    // misal Home -> Detail) geser dari kanan, dan "mundur" (pop, misal Detail -> Home
+    // lewat tombol back) geser dari kiri. Konsisten kayak pola navigasi Android umumnya.
+    var isForwardNavigation by remember { mutableStateOf(true) }
+
     fun navigateTo(route: AppRoute) {
+        isForwardNavigation = true
         navigationStack.add(currentRoute)
         currentRoute = route
     }
 
     fun navigateBack() {
+        isForwardNavigation = false
         if (navigationStack.isNotEmpty()) {
             currentRoute = navigationStack.removeAt(navigationStack.size - 1)
         } else if (currentRoute != AppRoute.MainShell) {
@@ -110,26 +118,44 @@ fun MainScreen(viewModel: AnimeViewModel) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Screen router animations
+            // Screen router animations -- arah geser ngikutin maju/mundurnya navigasi,
+            // durasi & easing disamain persis di semua transisi biar berasa konsisten
+            // di seluruh app (bukan cuma "ada animasinya", tapi "berasa satu bahasa").
             AnimatedContent(
                 targetState = currentRoute,
                 transitionSpec = {
-                    slideInHorizontally(
-                        animationSpec = tween(350),
-                        initialOffsetX = { fullWidth -> fullWidth }
-                    ) + fadeIn(tween(250)) togetherWith
-                            slideOutHorizontally(
-                                animationSpec = tween(350),
-                                targetOffsetX = { fullWidth -> -fullWidth }
-                            ) + fadeOut(tween(250))
+                    val direction = if (isForwardNavigation) 1 else -1
+                    (slideInHorizontally(
+                        animationSpec = tween(300, easing = FastOutSlowInEasing),
+                        initialOffsetX = { fullWidth -> direction * fullWidth }
+                    ) + fadeIn(tween(220))) togetherWith
+                            (slideOutHorizontally(
+                                animationSpec = tween(300, easing = FastOutSlowInEasing),
+                                targetOffsetX = { fullWidth -> -direction * fullWidth }
+                            ) + fadeOut(tween(220)))
                 },
                 label = "route_transition"
             ) { route ->
                 when (route) {
                     is AppRoute.MainShell -> {
                         Box(modifier = Modifier.fillMaxSize()) {
-                            // Render active tab inside the Main shell
-                            when (selectedTab) {
+                            // Render active tab inside the Main shell. Tab switch (Home /
+                            // Explore / Bookmark / Profile) sebelumnya "when" polos tanpa
+                            // animasi sama sekali -- sekarang dibungkus AnimatedContent
+                            // sendiri (fade + scale tipis) biar transisinya juga smooth,
+                            // konsisten sama durasi/easing transisi antar-route di atas.
+                            AnimatedContent(
+                                targetState = selectedTab,
+                                transitionSpec = {
+                                    (fadeIn(tween(220)) + scaleIn(
+                                        initialScale = 0.97f,
+                                        animationSpec = tween(220, easing = FastOutSlowInEasing)
+                                    )) togetherWith
+                                            (fadeOut(tween(150)))
+                                },
+                                label = "tab_transition"
+                            ) { tab ->
+                            when (tab) {
                                 0 -> HomeScreen(
                                     viewModel = viewModel,
                                     onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id, anime.source)) },
@@ -198,6 +224,7 @@ fun MainScreen(viewModel: AnimeViewModel) {
                                         navigateTo(AppRoute.Player(mappedEpisode, mappedDetail))
                                     }
                                 )
+                            }
                             }
 
                             // Custom Floating pill bottom navigation bar
