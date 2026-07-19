@@ -33,6 +33,7 @@ import com.dayynime.kuroflix.ui.components.AnimeCard
 import com.dayynime.kuroflix.ui.components.FireGradient
 import com.dayynime.kuroflix.ui.theme.*
 import com.dayynime.kuroflix.ui.viewmodel.AnimeViewModel
+import com.dayynime.kuroflix.ui.viewmodel.AuthUiState
 
 @Composable
 fun ProfileScreen(
@@ -75,87 +76,6 @@ fun ProfileScreen(
             .verticalScroll(rememberScrollState())
             .padding(bottom = 100.dp)
     ) {
-        // Kartu status akun -- tombol "Lanjutkan dengan Google" kalau belum login,
-        // atau info akun + tombol keluar kalau udah login.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(DarkSurface)
-                .padding(16.dp)
-        ) {
-            when (val state = authState) {
-                is com.dayynime.kuroflix.ui.viewmodel.AuthUiState.LoggedIn -> {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(FireGradient)
-                        ) {
-                            val avatarUrl = state.user.avatarUrl
-                            if (!avatarUrl.isNullOrBlank()) {
-                                AsyncImage(
-                                    model = avatarUrl,
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = state.user.name ?: state.user.email ?: "Pengguna Kuroflix",
-                                color = Color.White,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            if (state.user.email != null) {
-                                Text(
-                                    text = state.user.email,
-                                    color = TextSecondary,
-                                    fontSize = 12.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                        TextButton(onClick = { viewModel.logout() }) {
-                            Text(text = "Keluar", color = OrangeAccent)
-                        }
-                    }
-                }
-                else -> {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(text = "Belum masuk akun", color = Color.White, fontWeight = FontWeight.SemiBold)
-                            Text(
-                                text = "Masuk buat sinkronkan bookmark & riwayat.",
-                                color = TextSecondary,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Button(
-                            onClick = onLoginClick,
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = OrangeAccent)
-                        ) {
-                            Text(text = "Masuk")
-                        }
-                    }
-                }
-            }
-        }
-
         // Banner backdrop dengan avatar overlap -- ala reference: gambar besar di atas,
         // avatar bulat "menembus" garis bawah banner, nama + handle + stat di bawahnya.
         // Semua ditaruh dalam satu Box (tinggi tetap) biar overlap-nya rapi tanpa
@@ -195,6 +115,28 @@ fun ProfileScreen(
                 )
             }
 
+            // Tombol Masuk/Keluar kecil, nempel di pojok kanan atas banner --
+            // gak makan tempat sendiri, jadi bagian dari header yang sama.
+            val loggedInUser = (authState as? AuthUiState.LoggedIn)?.user
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 16.dp, end = 16.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .clickable {
+                        if (loggedInUser != null) viewModel.logout() else onLoginClick()
+                    }
+                    .padding(horizontal = 14.dp, vertical = 7.dp)
+            ) {
+                Text(
+                    text = if (loggedInUser != null) "Keluar" else "Masuk dengan Google",
+                    color = Color.White,
+                    style = Typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -217,24 +159,41 @@ fun ProfileScreen(
                             .border(2.dp, GoldAccent, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "KF",
-                            color = Color.White,
-                            style = Typography.displayLarge,
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Black
-                        )
+                        val avatarUrl = loggedInUser?.avatarUrl
+                        if (!avatarUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = avatarUrl,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            val initials = (loggedInUser?.name ?: loggedInUser?.email)
+                                ?.trim()
+                                ?.firstOrNull()
+                                ?.uppercaseChar()
+                                ?.toString() ?: "KF"
+                            Text(
+                                text = initials,
+                                color = Color.White,
+                                style = Typography.displayLarge,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = "Kuroflix User",
+                    text = loggedInUser?.name ?: loggedInUser?.email ?: "Kuroflix User",
                     color = Color.White,
                     style = Typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "@kuroflix",
+                    text = loggedInUser?.email ?: "@kuroflix",
                     color = GoldAccent,
                     style = Typography.labelSmall
                 )
