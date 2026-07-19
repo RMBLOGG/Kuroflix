@@ -23,6 +23,14 @@ object NetworkModule {
     private var animasuSamehadakuRetrofit: Retrofit? = null
     private var animekompiRetrofit: Retrofit? = null
     private var donghuaRetrofit: Retrofit? = null
+    private var supabaseRetrofit: Retrofit? = null
+
+    fun getSupabaseAuthApi(context: Context): SupabaseAuthApi {
+        if (supabaseRetrofit == null) {
+            supabaseRetrofit = createRetrofit(SupabaseConfig.SUPABASE_URL, context)
+        }
+        return supabaseRetrofit!!.create(SupabaseAuthApi::class.java)
+    }
 
     fun getAnimasuApi(context: Context): AnimasuApi {
         if (animasuSamehadakuRetrofit == null) {

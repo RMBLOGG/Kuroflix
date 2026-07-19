@@ -9,6 +9,9 @@ import kotlinx.coroutines.withContext
 import com.dayynime.kuroflix.data.local.WatchHistoryEntity
 import com.dayynime.kuroflix.data.local.PreferencesManager
 import com.dayynime.kuroflix.data.model.*
+import com.dayynime.kuroflix.data.network.IdTokenSignInRequest
+import com.dayynime.kuroflix.data.network.NetworkModule
+import com.dayynime.kuroflix.data.network.SupabaseConfig
 import com.dayynime.kuroflix.data.network.VideoExtractor
 import com.dayynime.kuroflix.data.repository.AnimeRepository
 import kotlinx.coroutines.flow.*
@@ -44,9 +47,125 @@ sealed interface PlayerUiState {
     data class Error(val message: String) : PlayerUiState
 }
 
+data class LoggedInUser(
+    val id: String,
+    val email: String?,
+    val name: String?,
+    val avatarUrl: String?
+)
+
+sealed interface AuthUiState {
+    object LoggedOut : AuthUiState
+    object Loading : AuthUiState
+    data class LoggedIn(val user: LoggedInUser) : AuthUiState
+    data class Error(val message: String) : AuthUiState
+}
+
 class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = AnimeRepository(application)
     private val preferencesManager = PreferencesManager(application)
+    private val supabaseAuthApi by lazy { NetworkModule.getSupabaseAuthApi(application) }
+
+    // ==================== Auth (Google via Supabase self-hosted) ====================
+
+    private val _authState = MutableStateFlow<AuthUiState>(AuthUiState.LoggedOut)
+    val authState: StateFlow<AuthUiState> = _authState.asStateFlow()
+
+    init {
+        // Coba pulihkan sesi login yang tersimpan pas app dibuka lagi.
+        viewModelScope.launch {
+            val session = preferencesManager.authSession.first()
+            if (session != null) {
+                _authState.value = AuthUiState.LoggedIn(
+                    LoggedInUser(session.userId, session.email, session.name, session.avatarUrl)
+                )
+                // Refresh token di background biar access_token gak keburu expired
+                // pas dipakai buat request pertama.
+                refreshSessionIfNeeded(session.refreshToken)
+            }
+        }
+    }
+
+    /** Dipanggil setelah Credential Manager berhasil ambil Google ID Token. */
+    fun loginWithGoogle(idToken: String, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            _authState.value = AuthUiState.Loading
+            try {
+                val res = supabaseAuthApi.signInWithIdToken(
+                    request = IdTokenSignInRequest(id_token = idToken),
+                    apiKey = SupabaseConfig.SUPABASE_ANON_KEY
+                )
+                val accessToken = res.accessToken
+                val refreshToken = res.refreshToken
+                val user = res.user
+                if (accessToken == null || refreshToken == null || user == null) {
+                    _authState.value = AuthUiState.Error("Login Google gagal: sesi tidak ditemukan.")
+                    return@launch
+                }
+                val metadata = user.userMetadata
+                val name = metadata?.get("full_name") as? String
+                    ?: metadata?.get("name") as? String
+                val avatarUrl = metadata?.get("avatar_url") as? String
+                    ?: metadata?.get("picture") as? String
+
+                preferencesManager.saveAuthSession(
+                    accessToken = accessToken,
+                    refreshToken = refreshToken,
+                    userId = user.id,
+                    email = user.email,
+                    name = name,
+                    avatarUrl = avatarUrl
+                )
+                _authState.value = AuthUiState.LoggedIn(LoggedInUser(user.id, user.email, name, avatarUrl))
+                onSuccess()
+            } catch (e: retrofit2.HttpException) {
+                val errBody = e.response()?.errorBody()?.string()
+                _authState.value = AuthUiState.Error("Login Google gagal (HTTP ${e.code()}): $errBody")
+                Log.e("AnimeViewModel", "Google Login HttpException: ${e.code()} - $errBody")
+            } catch (e: Exception) {
+                _authState.value = AuthUiState.Error("Login Google gagal: ${e.message}")
+                Log.e("AnimeViewModel", "Google Login Exception", e)
+            }
+        }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            preferencesManager.clearAuthSession()
+            _authState.value = AuthUiState.LoggedOut
+        }
+    }
+
+    /** Refresh access_token pakai refresh_token tersimpan; dipanggil pas restore sesi. */
+    private fun refreshSessionIfNeeded(refreshToken: String) {
+        viewModelScope.launch {
+            try {
+                val res = supabaseAuthApi.refreshToken(
+                    request = com.dayynime.kuroflix.data.network.RefreshTokenRequest(refresh_token = refreshToken),
+                    apiKey = SupabaseConfig.SUPABASE_ANON_KEY
+                )
+                val newAccess = res.accessToken
+                val newRefresh = res.refreshToken
+                val user = res.user
+                if (newAccess != null && newRefresh != null && user != null) {
+                    val current = preferencesManager.authSession.first()
+                    preferencesManager.saveAuthSession(
+                        accessToken = newAccess,
+                        refreshToken = newRefresh,
+                        userId = user.id,
+                        email = user.email ?: current?.email,
+                        name = current?.name,
+                        avatarUrl = current?.avatarUrl
+                    )
+                }
+            } catch (e: Exception) {
+                // Refresh gagal (misal refresh_token udah invalid) -> paksa logout
+                // biar user tau harus login ulang, daripada nyimpen sesi mati diam-diam.
+                Log.e("AnimeViewModel", "Gagal refresh sesi Supabase, logout paksa", e)
+                logout()
+            }
+        }
+    }
 
     // Preferensi default server streaming, GLOBAL lintas 4 sumber data.
     // "" berarti "Otomatis" (server pertama, behavior lama).

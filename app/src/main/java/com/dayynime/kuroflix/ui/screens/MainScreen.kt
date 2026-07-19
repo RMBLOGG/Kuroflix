@@ -47,6 +47,7 @@ sealed class AppRoute {
     object MainShell : AppRoute()
     object Schedule : AppRoute()
     object Settings : AppRoute()
+    object Login : AppRoute()
     data class Detail(val animeId: String, val source: String) : AppRoute()
     data class Player(val episode: EpisodeItem, val animeDetail: AnimeDetail) : AppRoute()
 }
@@ -201,6 +202,7 @@ fun MainScreen(viewModel: AnimeViewModel) {
                                 3 -> ProfileScreen(
                                     viewModel = viewModel,
                                     onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id, anime.source)) },
+                                    onLoginClick = { navigateTo(AppRoute.Login) },
                                     onHistoryClick = { historyItem ->
                                         val mappedDetail = AnimeDetail(
                                             id = historyItem.animeId.substringAfter(":"),
@@ -250,6 +252,14 @@ fun MainScreen(viewModel: AnimeViewModel) {
                         SettingsScreen(
                             viewModel = viewModel,
                             onBackClick = { navigateBack() }
+                        )
+                    }
+
+                    is AppRoute.Login -> {
+                        LoginScreen(
+                            viewModel = viewModel,
+                            onBackClick = { navigateBack() },
+                            onLoggedIn = { navigateBack() }
                         )
                     }
 

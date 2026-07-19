@@ -78,4 +78,70 @@ class PreferencesManager(private val context: Context) {
     fun findPreferred(servers: List<com.dayynime.kuroflix.data.model.VideoServer>, keyword: String) =
         if (keyword.isBlank()) null
         else servers.firstOrNull { it.name.contains(keyword, ignoreCase = true) }
+
+    // ==================== Auth session (Supabase) ====================
+    // Disimpan lokal biar user tetap login walau app ditutup/HP di-restart.
+    private val AUTH_ACCESS_TOKEN_KEY = stringPreferencesKey("auth_access_token")
+    private val AUTH_REFRESH_TOKEN_KEY = stringPreferencesKey("auth_refresh_token")
+    private val AUTH_USER_ID_KEY = stringPreferencesKey("auth_user_id")
+    private val AUTH_USER_EMAIL_KEY = stringPreferencesKey("auth_user_email")
+    private val AUTH_USER_NAME_KEY = stringPreferencesKey("auth_user_name")
+    private val AUTH_USER_AVATAR_KEY = stringPreferencesKey("auth_user_avatar")
+
+    data class AuthSession(
+        val accessToken: String,
+        val refreshToken: String,
+        val userId: String,
+        val email: String?,
+        val name: String?,
+        val avatarUrl: String?
+    )
+
+    val authSession: Flow<AuthSession?> = context.settingsDataStore.data
+        .map { prefs ->
+            val token = prefs[AUTH_ACCESS_TOKEN_KEY]
+            val refresh = prefs[AUTH_REFRESH_TOKEN_KEY]
+            val userId = prefs[AUTH_USER_ID_KEY]
+            if (token.isNullOrBlank() || refresh.isNullOrBlank() || userId.isNullOrBlank()) {
+                null
+            } else {
+                AuthSession(
+                    accessToken = token,
+                    refreshToken = refresh,
+                    userId = userId,
+                    email = prefs[AUTH_USER_EMAIL_KEY],
+                    name = prefs[AUTH_USER_NAME_KEY],
+                    avatarUrl = prefs[AUTH_USER_AVATAR_KEY]
+                )
+            }
+        }
+
+    suspend fun saveAuthSession(
+        accessToken: String,
+        refreshToken: String,
+        userId: String,
+        email: String?,
+        name: String?,
+        avatarUrl: String?
+    ) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[AUTH_ACCESS_TOKEN_KEY] = accessToken
+            prefs[AUTH_REFRESH_TOKEN_KEY] = refreshToken
+            prefs[AUTH_USER_ID_KEY] = userId
+            if (email != null) prefs[AUTH_USER_EMAIL_KEY] = email
+            if (name != null) prefs[AUTH_USER_NAME_KEY] = name
+            if (avatarUrl != null) prefs[AUTH_USER_AVATAR_KEY] = avatarUrl
+        }
+    }
+
+    suspend fun clearAuthSession() {
+        context.settingsDataStore.edit { prefs ->
+            prefs.remove(AUTH_ACCESS_TOKEN_KEY)
+            prefs.remove(AUTH_REFRESH_TOKEN_KEY)
+            prefs.remove(AUTH_USER_ID_KEY)
+            prefs.remove(AUTH_USER_EMAIL_KEY)
+            prefs.remove(AUTH_USER_NAME_KEY)
+            prefs.remove(AUTH_USER_AVATAR_KEY)
+        }
+    }
 }

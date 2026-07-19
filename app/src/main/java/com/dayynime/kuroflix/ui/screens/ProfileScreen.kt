@@ -38,10 +38,12 @@ import com.dayynime.kuroflix.ui.viewmodel.AnimeViewModel
 fun ProfileScreen(
     viewModel: AnimeViewModel,
     onAnimeClick: (AnimeItem) -> Unit,
+    onLoginClick: () -> Unit = {},
     onHistoryClick: (WatchHistoryEntity) -> Unit
 ) {
     val bookmarks by viewModel.bookmarks.collectAsState()
     val historyList by viewModel.history.collectAsState()
+    val authState by viewModel.authState.collectAsState()
 
     val uniqueAnimeCount = historyList.distinctBy { it.animeId }.size
 
@@ -73,6 +75,87 @@ fun ProfileScreen(
             .verticalScroll(rememberScrollState())
             .padding(bottom = 100.dp)
     ) {
+        // Kartu status akun -- tombol "Lanjutkan dengan Google" kalau belum login,
+        // atau info akun + tombol keluar kalau udah login.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(DarkSurface)
+                .padding(16.dp)
+        ) {
+            when (val state = authState) {
+                is com.dayynime.kuroflix.ui.viewmodel.AuthUiState.LoggedIn -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(FireGradient)
+                        ) {
+                            val avatarUrl = state.user.avatarUrl
+                            if (!avatarUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = avatarUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = state.user.name ?: state.user.email ?: "Pengguna Kuroflix",
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (state.user.email != null) {
+                                Text(
+                                    text = state.user.email,
+                                    color = TextSecondary,
+                                    fontSize = 12.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        TextButton(onClick = { viewModel.logout() }) {
+                            Text(text = "Keluar", color = OrangeAccent)
+                        }
+                    }
+                }
+                else -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = "Belum masuk akun", color = Color.White, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                text = "Masuk buat sinkronkan bookmark & riwayat.",
+                                color = TextSecondary,
+                                fontSize = 12.sp
+                            )
+                        }
+                        Button(
+                            onClick = onLoginClick,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = OrangeAccent)
+                        ) {
+                            Text(text = "Masuk")
+                        }
+                    }
+                }
+            }
+        }
+
         // Banner backdrop dengan avatar overlap -- ala reference: gambar besar di atas,
         // avatar bulat "menembus" garis bawah banner, nama + handle + stat di bawahnya.
         // Semua ditaruh dalam satu Box (tinggi tetap) biar overlap-nya rapi tanpa
