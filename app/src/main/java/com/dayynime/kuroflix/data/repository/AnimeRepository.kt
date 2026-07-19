@@ -180,11 +180,15 @@ class AnimeRepository(private val context: Context) {
                 val res = animasuApi.getHome()
                 val ongoing = res.ongoing?.map { it.toAnimeItem() } ?: emptyList()
                 val recent = res.recent?.map { it.toAnimeItem() } ?: emptyList()
+                // Dulu di-hardcode emptyList() padahal endpoint completed-nya ada
+                // (dipakai juga di getCategory) -- sekarang beneran di-fetch.
+                val completed = runCatching { animasuApi.getCompleted(1).animes?.map { it.toAnimeItem() } }
+                    .getOrNull() ?: emptyList()
                 HomeData(
                     latest = recent,
                     ongoing = ongoing,
                     popular = ongoing,
-                    completed = emptyList(),
+                    completed = completed,
                     movies = emptyList(),
                     upcoming = fetchTodaySchedule(source)
                 )
@@ -193,11 +197,14 @@ class AnimeRepository(private val context: Context) {
                 val res = samehadakuApi.getHome()
                 val recent = res.data?.recent?.animeList?.map { it.toAnimeItem() } ?: emptyList()
                 val movie = res.data?.movie?.animeList?.map { it.toAnimeItem() } ?: emptyList()
+                val completed = runCatching {
+                    samehadakuApi.getCompleted(1).data?.animeList?.map { it.toAnimeItem() }
+                }.getOrNull() ?: emptyList()
                 HomeData(
                     latest = recent,
                     popular = recent,
                     ongoing = recent,
-                    completed = emptyList(),
+                    completed = completed,
                     movies = movie,
                     upcoming = fetchTodaySchedule(source)
                 )
@@ -205,11 +212,14 @@ class AnimeRepository(private val context: Context) {
             "animekompi" -> {
                 val res = animekompiApi.getHome()
                 val list = res.data?.map { it.toAnimeItem() } ?: emptyList()
+                val completed = runCatching {
+                    animekompiApi.getCompleted(1).data?.map { it.toAnimeItem() }
+                }.getOrNull() ?: emptyList()
                 HomeData(
                     latest = list,
                     popular = list,
                     ongoing = list,
-                    completed = emptyList(),
+                    completed = completed,
                     movies = emptyList(),
                     upcoming = fetchTodaySchedule(source)
                 )

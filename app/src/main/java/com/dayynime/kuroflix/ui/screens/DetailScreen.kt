@@ -44,6 +44,7 @@ import com.dayynime.kuroflix.ui.viewmodel.DetailUiState
 @Composable
 fun DetailScreen(
     animeId: String,
+    source: String,
     viewModel: AnimeViewModel,
     onBackClick: () -> Unit,
     onEpisodeClick: (EpisodeItem, AnimeDetail) -> Unit
@@ -53,7 +54,7 @@ fun DetailScreen(
     val historyList by viewModel.history.collectAsState()
 
     LaunchedEffect(key1 = animeId) {
-        viewModel.loadDetail(animeId)
+        viewModel.loadDetail(source, animeId)
     }
 
     LaunchedEffect(key1 = detailState) {
@@ -90,7 +91,7 @@ fun DetailScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        onClick = { viewModel.loadDetail(animeId) },
+                        onClick = { viewModel.loadDetail(source, animeId) },
                         colors = ButtonDefaults.buttonColors(containerColor = OrangeAccent)
                     ) {
                         Text("Coba Lagi")

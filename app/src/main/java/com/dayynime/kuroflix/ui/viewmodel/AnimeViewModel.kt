@@ -354,10 +354,19 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun loadDetail(slug: String) {
+    fun loadDetail(source: String, slug: String) {
+        // Anime dari bookmark/riwayat/hasil search bisa aja punya source beda
+        // dari yang lagi aktif (misal lagi di V1 tapi buka anime yang di-bookmark
+        // dari V4/donghua). Dulu ini selalu pakai _selectedSource.value yang
+        // global, jadi kalau beda source -> slug gak ketemu di API sumber yang
+        // salah -> HTTP 500. Sekarang di-sync dulu ke source anime yang beneran
+        // diklik, sebelum fetch detail-nya.
+        if (_selectedSource.value != source) {
+            _selectedSource.value = source
+        }
         viewModelScope.launch {
             _detailUiState.value = DetailUiState.Loading
-            repository.getDetail(_selectedSource.value, slug)
+            repository.getDetail(source, slug)
                 .catch { e ->
                     Log.e("AnimeViewModel", "Error loading details", e)
                     _detailUiState.value = DetailUiState.Error(e.message ?: "Unknown error")

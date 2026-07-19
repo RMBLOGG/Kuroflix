@@ -46,7 +46,7 @@ sealed class AppRoute {
     object MainShell : AppRoute()
     object Schedule : AppRoute()
     object Settings : AppRoute()
-    data class Detail(val animeId: String) : AppRoute()
+    data class Detail(val animeId: String, val source: String) : AppRoute()
     data class Player(val episode: EpisodeItem, val animeDetail: AnimeDetail) : AppRoute()
 }
 
@@ -132,12 +132,12 @@ fun MainScreen(viewModel: AnimeViewModel) {
                             when (selectedTab) {
                                 0 -> HomeScreen(
                                     viewModel = viewModel,
-                                    onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id)) },
+                                    onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id, anime.source)) },
                                     onScheduleClick = { navigateTo(AppRoute.Schedule) },
                                     onSettingsClick = { navigateTo(AppRoute.Settings) },
                                     onContinueWatchClick = { historyItem ->
                                         // Load detailed object from historical logs
-                                        viewModel.loadDetail(historyItem.animeId.substringAfter(":"))
+                                        viewModel.loadDetail(historyItem.source, historyItem.animeId.substringAfter(":"))
                                         // Fallback mapped detailed anime reference
                                         val mappedDetail = AnimeDetail(
                                             id = historyItem.animeId.substringAfter(":"),
@@ -164,17 +164,17 @@ fun MainScreen(viewModel: AnimeViewModel) {
 
                                 1 -> ExploreScreen(
                                     viewModel = viewModel,
-                                    onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id)) }
+                                    onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id, anime.source)) }
                                 )
 
                                 2 -> BookmarkScreen(
                                     viewModel = viewModel,
-                                    onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id)) }
+                                    onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id, anime.source)) }
                                 )
 
                                 3 -> ProfileScreen(
                                     viewModel = viewModel,
-                                    onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id)) },
+                                    onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id, anime.source)) },
                                     onHistoryClick = { historyItem ->
                                         val mappedDetail = AnimeDetail(
                                             id = historyItem.animeId.substringAfter(":"),
@@ -215,7 +215,7 @@ fun MainScreen(viewModel: AnimeViewModel) {
                         ScheduleScreen(
                             viewModel = viewModel,
                             onBackClick = { navigateBack() },
-                            onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id)) }
+                            onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id, anime.source)) }
                         )
                     }
 
@@ -229,6 +229,7 @@ fun MainScreen(viewModel: AnimeViewModel) {
                     is AppRoute.Detail -> {
                         DetailScreen(
                             animeId = route.animeId,
+                            source = route.source,
                             viewModel = viewModel,
                             onBackClick = { navigateBack() },
                             onEpisodeClick = { episode, detail ->
