@@ -1,19 +1,28 @@
 package com.dayynime.kuroflix.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -21,6 +30,8 @@ import androidx.compose.ui.unit.sp
 import com.dayynime.kuroflix.data.model.AnimeItem
 import com.dayynime.kuroflix.ui.components.AnimeCard
 import com.dayynime.kuroflix.ui.theme.DarkBg
+import com.dayynime.kuroflix.ui.theme.DarkSurface
+import com.dayynime.kuroflix.ui.theme.RedAccent
 import com.dayynime.kuroflix.ui.theme.TextMuted
 import com.dayynime.kuroflix.ui.theme.TextSecondary
 import com.dayynime.kuroflix.ui.theme.Typography
@@ -32,6 +43,9 @@ fun BookmarkScreen(
     onAnimeClick: (AnimeItem) -> Unit
 ) {
     val bookmarks by viewModel.bookmarks.collectAsState()
+
+    // Anime yang lagi ditanyain konfirmasi hapusnya -- null berarti gak ada dialog
+    var pendingDelete by remember { mutableStateOf<AnimeItem?>(null) }
 
     Column(
         modifier = Modifier
@@ -83,13 +97,59 @@ fun BookmarkScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(bookmarks) { anime ->
-                    AnimeCard(
-                        anime = anime,
-                        onClick = { onAnimeClick(anime) }
-                    )
+                items(bookmarks, key = { "${it.source}:${it.id}" }) { anime ->
+                    Box {
+                        AnimeCard(
+                            anime = anime,
+                            onClick = { onAnimeClick(anime) }
+                        )
+                        // Tombol hapus kecil di pojok kanan atas -- gak nyentuh
+                        // AnimeCard bersama biar tampilan di Home/Explore gak ikut berubah.
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(6.dp)
+                                .size(26.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.6f))
+                                .clickable { pendingDelete = anime },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Hapus dari Bookmark",
+                                tint = Color.White,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
+    }
+
+    val target = pendingDelete
+    if (target != null) {
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("Hapus dari Bookmark?") },
+            text = { Text("\"${target.title}\" akan dihapus dari daftar bookmark-mu.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.toggleBookmark(target)
+                    pendingDelete = null
+                }) {
+                    Text("Hapus", color = RedAccent)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) {
+                    Text("Batal")
+                }
+            },
+            containerColor = DarkSurface,
+            titleContentColor = Color.White,
+            textContentColor = TextSecondary
+        )
     }
 }
