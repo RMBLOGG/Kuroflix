@@ -108,7 +108,13 @@ class AnimeRepository(private val context: Context) {
     val bookmarks: Flow<List<AnimeItem>> = bookmarkDao.getAllBookmarks().map { entities ->
         entities.map {
             AnimeItem(
-                id = it.id,
+                // BookmarkEntity.id disimpen sebagai composite "source:slug" (biar unik
+                // di Room), tapi AnimeItem.id di seluruh app lain selalu berupa slug
+                // POLOS (source-nya kepisah di field .source sendiri). Dulu di sini
+                // langsung `it.id` mentah-mentah, jadi AnimeItem dari daftar bookmark
+                // punya id dobel-prefix kayak "donghua:donghua:slug-nya" pas dipakai buat
+                // fetch detail -> API dapet slug yang gak valid -> HTTP 500.
+                id = it.id.substringAfter(":"),
                 title = it.title,
                 thumbnail = it.thumbnail,
                 rating = it.rating,
