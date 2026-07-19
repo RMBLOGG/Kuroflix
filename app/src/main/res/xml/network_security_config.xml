@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Izinin koneksi HTTP (bukan HTTPS) HANYA ke domain server Supabase self-hosted
+    kita. Ini perlu karena Android sejak API 28 blokir cleartext traffic secara
+    default. Domain lain tetap wajib HTTPS seperti biasa (cleartextTrafficPermitted
+    default = false untuk base-config).
+
+    Kalau nanti server Supabase udah pasang HTTPS (lewat reverse proxy Caddy/Nginx),
+    baris <domain-config> ini bisa dihapus dan ganti SUPABASE_URL ke https://.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">203-175-11-166.nip.io</domain>
+    </domain-config>
+</network-security-config>
