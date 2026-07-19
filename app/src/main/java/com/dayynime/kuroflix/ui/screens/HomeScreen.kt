@@ -95,6 +95,24 @@ fun HomeScreen(
                         color = GoldAccent,
                         fontWeight = FontWeight.Black
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    // Badge BETA -- nandain app ini masih tahap pengembangan,
+                    // styling-nya disamain sama badge "POPULER" di hero card
+                    // (outline tipis, bukan blok solid) biar konsisten.
+                    Box(
+                        modifier = Modifier
+                            .background(Color.Transparent, RoundedCornerShape(50.dp))
+                            .border(1.dp, GoldAccent.copy(alpha = 0.7f), RoundedCornerShape(50.dp))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "BETA",
+                            color = GoldAccent,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                    }
                 }
                 // Sumber aktif sekarang ditampilin di sini aja (kecil, non-interaktif) --
                 // gantinya tab pill yang dulu di header. Ganti sumbernya lewat Settings.
