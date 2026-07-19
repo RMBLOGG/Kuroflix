@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
@@ -67,6 +68,36 @@ fun MainScreen(viewModel: AnimeViewModel) {
             currentRoute = navigationStack.removeAt(navigationStack.size - 1)
         } else if (currentRoute != AppRoute.MainShell) {
             currentRoute = AppRoute.MainShell
+        }
+    }
+
+    // Landscape + fullscreen immersive dikelola di sini (bukan di dalam PlayerScreen)
+    // dan di-key dari status "lagi di route Player atau bukan" -- BUKAN dari instance
+    // Player-nya. Alasannya: pas autoplay pindah ke episode berikutnya, Compose bikin
+    // instance PlayerScreen baru (utk episode baru) SEBELUM instance lama beres animasi
+    // keluar. Kalau tiap instance PlayerScreen punya logic "reset ke portrait pas dispose"
+    // sendiri-sendiri, instance LAMA yang baru dispose belakangan bakal nge-reset balik ke
+    // portrait SETELAH instance BARU udah nge-set landscape -- makanya kejadian kayak di
+    // laporan bug: klik "Putar Sekarang" tapi malah balik ke portrait. Dengan di-key dari
+    // boolean di level MainScreen, transisi antar-episode gak bakal retrigger apa-apa
+    // karena boolean-nya tetap true selama masih di Player, cuma berubah pas bener-bener
+    // masuk/keluar dari area Player.
+    val context = LocalContext.current
+    val activity = context as? android.app.Activity
+    val isPlayerRoute = currentRoute is AppRoute.Player
+    LaunchedEffect(isPlayerRoute) {
+        if (isPlayerRoute) {
+            activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            activity?.window?.decorView?.systemUiVisibility = (
+                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
+                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            )
+            activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            activity?.window?.decorView?.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_VISIBLE
+            activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 

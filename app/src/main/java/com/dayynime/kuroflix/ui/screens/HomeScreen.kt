@@ -59,7 +59,7 @@ fun HomeScreen(
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
 
-    val sources = listOf(
+    val sourceLabels = mapOf(
         "animasu" to "Dayynime V1",
         "samehadaku" to "Dayynime V2",
         "animekompi" to "Dayynime V3",
@@ -79,20 +79,30 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Kuro",
+                        style = Typography.displayLarge,
+                        fontSize = 26.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        text = "flix",
+                        style = Typography.displayLarge,
+                        fontSize = 26.sp,
+                        color = GoldAccent,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                // Sumber aktif sekarang ditampilin di sini aja (kecil, non-interaktif) --
+                // gantinya tab pill yang dulu di header. Ganti sumbernya lewat Settings.
                 Text(
-                    text = "Kuro",
-                    style = Typography.displayLarge,
-                    fontSize = 26.sp,
-                    color = Color.White,
-                    fontWeight = FontWeight.Black
-                )
-                Text(
-                    text = "flix",
-                    style = Typography.displayLarge,
-                    fontSize = 26.sp,
-                    color = GoldAccent,
-                    fontWeight = FontWeight.Black
+                    text = sourceLabels[currentSource] ?: currentSource,
+                    color = TextSecondary,
+                    style = Typography.labelSmall,
+                    fontSize = 11.sp
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -108,38 +118,6 @@ fun HomeScreen(
                         imageVector = Icons.Default.Settings,
                         contentDescription = "Pengaturan",
                         tint = TextPrimary
-                    )
-                }
-            }
-        }
-
-        // Horizontal Source Selector Bar
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(sources) { (key, label) ->
-                val isActive = currentSource == key
-                val bgBrush = if (isActive) FireGradient else Brush.linearGradient(listOf(DarkSurface, DarkSurface))
-                val border = if (!isActive) BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)) else null
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50.dp))
-                        .background(bgBrush)
-                        .then(if (border != null) Modifier.border(border, RoundedCornerShape(50.dp)) else Modifier)
-                        .clickable { viewModel.setSource(key) }
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = label,
-                        color = if (isActive) Color.White else TextSecondary,
-                        style = Typography.labelLarge,
-                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium
                     )
                 }
             }
