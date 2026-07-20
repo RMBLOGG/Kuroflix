@@ -15,11 +15,12 @@ import com.dayynime.kuroflix.data.model.*
 import com.dayynime.kuroflix.data.network.ChatApi
 import com.dayynime.kuroflix.data.network.ChatMessage
 import com.dayynime.kuroflix.data.network.CloudinaryConfig
+import com.dayynime.kuroflix.data.network.Profile
+import com.dayynime.kuroflix.data.network.ProfileUpdateBody
 import com.dayynime.kuroflix.data.network.IdTokenSignInRequest
 import com.dayynime.kuroflix.data.network.NetworkModule
 import com.dayynime.kuroflix.data.network.RefreshTokenRequest
 import com.dayynime.kuroflix.data.network.SupabaseConfig
-import com.dayynime.kuroflix.data.network.UpdateUserRequest
 import com.dayynime.kuroflix.data.network.VideoExtractor
 import com.dayynime.kuroflix.data.repository.AnimeRepository
 import kotlinx.coroutines.flow.*
@@ -86,6 +87,25 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = AnimeRepository(application)
     private val preferencesManager = PreferencesManager(application)
     private val supabaseAuthApi by lazy { NetworkModule.getSupabaseAuthApi(application) }
+    private val profileApi by lazy { NetworkModule.getProfileApi(application) }
+
+    /**
+     * Ambil nama/foto dari tabel `profiles` (bukan dari data akun Google) --
+     * ini yang jadi sumber utama biar gak ketimpa tiap Google sign-in ulang.
+     * Return null kalau gagal/gak ketemu, biar caller bisa fallback aman.
+     */
+    private suspend fun fetchProfileOverride(userId: String, accessToken: String): Profile? {
+        return try {
+            profileApi.getProfile(
+                apiKey = SupabaseConfig.SUPABASE_ANON_KEY,
+                authorization = "Bearer $accessToken",
+                idFilter = "eq.$userId"
+            ).firstOrNull()
+        } catch (e: Exception) {
+            Log.e("AnimeViewModel", "Gagal ambil data profiles", e)
+            null
+        }
+    }
 
     // ==================== Auth (Google via Supabase self-hosted) ====================
 
@@ -133,10 +153,17 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
                 val metadata = user.userMetadata
-                val name = metadata?.get("full_name") as? String
+                val googleName = metadata?.get("full_name") as? String
                     ?: metadata?.get("name") as? String
-                val avatarUrl = metadata?.get("avatar_url") as? String
+                val googleAvatarUrl = metadata?.get("avatar_url") as? String
                     ?: metadata?.get("picture") as? String
+
+                // Ambil dari tabel `profiles` dulu -- kalau user pernah custom nama/foto,
+                // ini yang menang. Google punya kebiasaan nimpa ulang user_metadata tiap
+                // sign-in, jadi data Google cuma dipakai kalau belum pernah di-custom.
+                val profileOverride = fetchProfileOverride(user.id, accessToken)
+                val name = profileOverride?.full_name ?: googleName
+                val avatarUrl = profileOverride?.avatar_url ?: googleAvatarUrl
 
                 preferencesManager.saveAuthSession(
                     accessToken = accessToken,
@@ -289,15 +316,20 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
 
                 val uploadedAvatarUrl = newAvatarUri?.let { uploadAvatarToCloudinary(it) }
 
-                val dataToUpdate = mutableMapOf<String, String?>()
-                if (!newName.isNullOrBlank()) dataToUpdate["full_name"] = newName
-                if (uploadedAvatarUrl != null) dataToUpdate["avatar_url"] = uploadedAvatarUrl
+                val hasNameChange = !newName.isNullOrBlank()
+                val hasAvatarChange = uploadedAvatarUrl != null
 
-                if (dataToUpdate.isNotEmpty()) {
-                    supabaseAuthApi.updateUser(
-                        request = UpdateUserRequest(data = dataToUpdate),
+                if (hasNameChange || hasAvatarChange) {
+                    // Tulis ke tabel `profiles`, BUKAN ke data akun Google -- ini yang
+                    // bikin perubahan nama/foto gak ketimpa lagi pas login Google ulang.
+                    profileApi.updateProfile(
+                        body = ProfileUpdateBody(
+                            full_name = if (hasNameChange) newName else null,
+                            avatar_url = if (hasAvatarChange) uploadedAvatarUrl else null
+                        ),
                         apiKey = SupabaseConfig.SUPABASE_ANON_KEY,
-                        authorization = "Bearer ${session.accessToken}"
+                        authorization = "Bearer ${session.accessToken}",
+                        idFilter = "eq.${session.userId}"
                     )
                 }
 
