@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
@@ -45,6 +46,7 @@ fun ProfileScreen(
     val bookmarks by viewModel.bookmarks.collectAsState()
     val historyList by viewModel.history.collectAsState()
     val authState by viewModel.authState.collectAsState()
+    var showEditProfileDialog by remember { mutableStateOf(false) }
 
     val uniqueAnimeCount = historyList.distinctBy { it.animeId }.size
 
@@ -186,17 +188,42 @@ fun ProfileScreen(
                     }
                 }
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = loggedInUser?.name ?: loggedInUser?.email ?: "Kuroflix User",
-                    color = Color.White,
-                    style = Typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = loggedInUser?.name ?: loggedInUser?.email ?: "Kuroflix User",
+                        color = Color.White,
+                        style = Typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (loggedInUser != null) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        IconButton(
+                            onClick = { showEditProfileDialog = true },
+                            modifier = Modifier.size(20.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Edit,
+                                contentDescription = "Edit Profil",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
                 Text(
                     text = loggedInUser?.email ?: "@kuroflix",
                     color = GoldAccent,
                     style = Typography.labelSmall
                 )
+
+                if (showEditProfileDialog && loggedInUser != null) {
+                    EditProfileDialog(
+                        viewModel = viewModel,
+                        currentName = loggedInUser.name,
+                        currentAvatarUrl = loggedInUser.avatarUrl,
+                        onDismiss = { showEditProfileDialog = false }
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(18.dp))
 

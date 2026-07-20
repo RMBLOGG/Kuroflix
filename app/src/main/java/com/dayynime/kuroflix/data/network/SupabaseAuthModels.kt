@@ -15,6 +15,11 @@ data class RefreshTokenRequest(
 )
 
 @JsonClass(generateAdapter = true)
+data class UpdateUserRequest(
+    val data: Map<String, String?>
+)
+
+@JsonClass(generateAdapter = true)
 data class SupabaseUser(
     val id: String,
     val email: String? = null,

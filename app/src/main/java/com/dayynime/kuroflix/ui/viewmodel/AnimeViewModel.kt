@@ -1,6 +1,7 @@
 package com.dayynime.kuroflix.ui.viewmodel
 
 import android.app.Application
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,13 +10,19 @@ import kotlinx.coroutines.withContext
 import com.dayynime.kuroflix.data.local.WatchHistoryEntity
 import com.dayynime.kuroflix.data.local.PreferencesManager
 import com.dayynime.kuroflix.data.model.*
+import com.dayynime.kuroflix.data.network.CloudinaryConfig
 import com.dayynime.kuroflix.data.network.IdTokenSignInRequest
 import com.dayynime.kuroflix.data.network.NetworkModule
+import com.dayynime.kuroflix.data.network.RefreshTokenRequest
 import com.dayynime.kuroflix.data.network.SupabaseConfig
+import com.dayynime.kuroflix.data.network.UpdateUserRequest
 import com.dayynime.kuroflix.data.network.VideoExtractor
 import com.dayynime.kuroflix.data.repository.AnimeRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 sealed interface HomeUiState {
     object Loading : HomeUiState
@@ -60,6 +67,15 @@ sealed interface AuthUiState {
     object Loading : AuthUiState
     data class LoggedIn(val user: LoggedInUser) : AuthUiState
     data class Error(val message: String) : AuthUiState
+}
+
+// State terpisah dari AuthUiState -- sengaja, biar kalau update profil gagal,
+// user gak ke-treat kayak "belum login" dan kelempar balik ke LoginScreen wajib.
+sealed interface ProfileUpdateState {
+    object Idle : ProfileUpdateState
+    object Loading : ProfileUpdateState
+    object Success : ProfileUpdateState
+    data class Error(val message: String) : ProfileUpdateState
 }
 
 class AnimeViewModel(application: Application) : AndroidViewModel(application) {
@@ -144,6 +160,79 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             preferencesManager.clearAuthSession()
             _authState.value = AuthUiState.LoggedOut
         }
+    }
+
+    private val _profileUpdateState = MutableStateFlow<ProfileUpdateState>(ProfileUpdateState.Idle)
+    val profileUpdateState: StateFlow<ProfileUpdateState> = _profileUpdateState.asStateFlow()
+
+    fun resetProfileUpdateState() {
+        _profileUpdateState.value = ProfileUpdateState.Idle
+    }
+
+    /**
+     * Update nama dan/atau foto profil. Foto (kalau ada) di-upload ke Cloudinary
+     * dulu (unsigned preset, gak nyentuh API secret sama sekali), baru URL-nya
+     * disimpen ke user_metadata Supabase supaya sinkron kalau login dari device lain.
+     */
+    fun updateProfile(newName: String?, newAvatarUri: Uri?) {
+        viewModelScope.launch {
+            _profileUpdateState.value = ProfileUpdateState.Loading
+            try {
+                val session = preferencesManager.authSession.first()
+                if (session == null) {
+                    _profileUpdateState.value = ProfileUpdateState.Error("Sesi login tidak ditemukan.")
+                    return@launch
+                }
+
+                val uploadedAvatarUrl = newAvatarUri?.let { uploadAvatarToCloudinary(it) }
+
+                val dataToUpdate = mutableMapOf<String, String?>()
+                if (!newName.isNullOrBlank()) dataToUpdate["full_name"] = newName
+                if (uploadedAvatarUrl != null) dataToUpdate["avatar_url"] = uploadedAvatarUrl
+
+                if (dataToUpdate.isNotEmpty()) {
+                    supabaseAuthApi.updateUser(
+                        request = UpdateUserRequest(data = dataToUpdate),
+                        apiKey = SupabaseConfig.SUPABASE_ANON_KEY,
+                        authorization = "Bearer ${session.accessToken}"
+                    )
+                }
+
+                val finalName = newName?.takeIf { it.isNotBlank() } ?: session.name
+                val finalAvatar = uploadedAvatarUrl ?: session.avatarUrl
+                preferencesManager.updateAuthProfileLocal(finalName, finalAvatar)
+                _authState.value = AuthUiState.LoggedIn(
+                    LoggedInUser(session.userId, session.email, finalName, finalAvatar)
+                )
+                _profileUpdateState.value = ProfileUpdateState.Success
+            } catch (e: retrofit2.HttpException) {
+                val errBody = e.response()?.errorBody()?.string()
+                Log.e("AnimeViewModel", "Update profil HttpException: ${e.code()} - $errBody")
+                _profileUpdateState.value = ProfileUpdateState.Error("Gagal update profil (HTTP ${e.code()}).")
+            } catch (e: Exception) {
+                Log.e("AnimeViewModel", "Gagal update profil", e)
+                _profileUpdateState.value = ProfileUpdateState.Error("Gagal update profil: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun uploadAvatarToCloudinary(uri: Uri): String {
+        val context = getApplication<Application>()
+        val cloudinaryApi = NetworkModule.getCloudinaryApi(context)
+        val bytes = withContext(Dispatchers.IO) {
+            context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        } ?: throw IllegalStateException("Gak bisa baca file gambar yang dipilih.")
+
+        val requestBody = bytes.toRequestBody("image/*".toMediaTypeOrNull())
+        val filePart = MultipartBody.Part.createFormData("file", "avatar.jpg", requestBody)
+        val presetBody = CloudinaryConfig.UPLOAD_PRESET.toRequestBody("text/plain".toMediaTypeOrNull())
+
+        val response = cloudinaryApi.uploadImage(
+            url = CloudinaryConfig.UPLOAD_URL,
+            file = filePart,
+            uploadPreset = presetBody
+        )
+        return response.secure_url ?: throw IllegalStateException("Upload berhasil tapi URL kosong.")
     }
 
     /** Refresh access_token pakai refresh_token tersimpan; dipanggil pas restore sesi. */

@@ -3,6 +3,7 @@ package com.dayynime.kuroflix.data.network
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.PUT
 
 interface SupabaseAuthApi {
 
@@ -21,4 +22,13 @@ interface SupabaseAuthApi {
         @Body request: RefreshTokenRequest,
         @Header("apikey") apiKey: String
     ): AuthResponse
+
+    // Update profil user yang lagi login (nama, foto, dll) -- disimpan di
+    // user_metadata. Butuh access_token user (bukan cuma apikey project).
+    @PUT("auth/v1/user")
+    suspend fun updateUser(
+        @Body request: UpdateUserRequest,
+        @Header("apikey") apiKey: String,
+        @Header("Authorization") authorization: String
+    ): SupabaseUser
 }

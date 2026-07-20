@@ -24,12 +24,20 @@ object NetworkModule {
     private var animekompiRetrofit: Retrofit? = null
     private var donghuaRetrofit: Retrofit? = null
     private var supabaseRetrofit: Retrofit? = null
+    private var cloudinaryRetrofit: Retrofit? = null
 
     fun getSupabaseAuthApi(context: Context): SupabaseAuthApi {
         if (supabaseRetrofit == null) {
             supabaseRetrofit = createRetrofit(SupabaseConfig.SUPABASE_URL, context)
         }
         return supabaseRetrofit!!.create(SupabaseAuthApi::class.java)
+    }
+
+    fun getCloudinaryApi(context: Context): CloudinaryApi {
+        if (cloudinaryRetrofit == null) {
+            cloudinaryRetrofit = createRetrofit("https://api.cloudinary.com/", context)
+        }
+        return cloudinaryRetrofit!!.create(CloudinaryApi::class.java)
     }
 
     fun getAnimasuApi(context: Context): AnimasuApi {

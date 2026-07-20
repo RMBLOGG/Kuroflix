@@ -134,6 +134,14 @@ class PreferencesManager(private val context: Context) {
         }
     }
 
+    /** Update nama/foto profil doang, tanpa ngutak-atik token yang lagi tersimpan. */
+    suspend fun updateAuthProfileLocal(name: String?, avatarUrl: String?) {
+        context.settingsDataStore.edit { prefs ->
+            if (name != null) prefs[AUTH_USER_NAME_KEY] = name
+            if (avatarUrl != null) prefs[AUTH_USER_AVATAR_KEY] = avatarUrl
+        }
+    }
+
     suspend fun clearAuthSession() {
         context.settingsDataStore.edit { prefs ->
             prefs.remove(AUTH_ACCESS_TOKEN_KEY)
