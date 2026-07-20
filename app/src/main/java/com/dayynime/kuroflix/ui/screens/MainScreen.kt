@@ -49,6 +49,7 @@ sealed class AppRoute {
     object Schedule : AppRoute()
     object Settings : AppRoute()
     object Login : AppRoute()
+    object Chat : AppRoute()
     data class Detail(val animeId: String, val source: String) : AppRoute()
     data class Player(val episode: EpisodeItem, val animeDetail: AnimeDetail) : AppRoute()
 }
@@ -189,6 +190,7 @@ fun MainScreen(viewModel: AnimeViewModel) {
                                     onAnimeClick = { anime -> navigateTo(AppRoute.Detail(anime.id, anime.source)) },
                                     onScheduleClick = { navigateTo(AppRoute.Schedule) },
                                     onSettingsClick = { navigateTo(AppRoute.Settings) },
+                                    onChatClick = { navigateTo(AppRoute.Chat) },
                                     onContinueWatchClick = { historyItem ->
                                         // Load detailed object from historical logs
                                         viewModel.loadDetail(historyItem.source, historyItem.animeId.substringAfter(":"))
@@ -287,6 +289,13 @@ fun MainScreen(viewModel: AnimeViewModel) {
                             viewModel = viewModel,
                             onBackClick = { navigateBack() },
                             onLoggedIn = { navigateBack() }
+                        )
+                    }
+
+                    is AppRoute.Chat -> {
+                        ChatScreen(
+                            viewModel = viewModel,
+                            onBackClick = { navigateBack() }
                         )
                     }
 

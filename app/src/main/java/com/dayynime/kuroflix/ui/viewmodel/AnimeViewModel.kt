@@ -6,10 +6,14 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import com.dayynime.kuroflix.data.local.WatchHistoryEntity
 import com.dayynime.kuroflix.data.local.PreferencesManager
 import com.dayynime.kuroflix.data.model.*
+import com.dayynime.kuroflix.data.network.ChatApi
+import com.dayynime.kuroflix.data.network.ChatMessage
 import com.dayynime.kuroflix.data.network.CloudinaryConfig
 import com.dayynime.kuroflix.data.network.IdTokenSignInRequest
 import com.dayynime.kuroflix.data.network.NetworkModule
@@ -151,6 +155,105 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 _authState.value = AuthUiState.Error("Login Google gagal: ${e.message}")
                 Log.e("AnimeViewModel", "Google Login Exception", e)
+            }
+        }
+    }
+
+    private val chatApi by lazy { NetworkModule.getChatApi(application) }
+
+    private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
+    val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
+
+    private val _chatError = MutableStateFlow<String?>(null)
+    val chatError: StateFlow<String?> = _chatError.asStateFlow()
+
+    private var chatPollingJob: Job? = null
+
+    /** Dipanggil pas ChatScreen dibuka. Muat pesan lama sekali, lalu polling
+     * ringan tiap beberapa detik buat pesan baru doang (bukan tarik ulang semua). */
+    fun startChatPolling() {
+        if (chatPollingJob?.isActive == true) return
+        chatPollingJob = viewModelScope.launch {
+            try {
+                val session = preferencesManager.authSession.first() ?: return@launch
+                val initial = chatApi.getMessages(
+                    apiKey = SupabaseConfig.SUPABASE_ANON_KEY,
+                    authorization = "Bearer ${session.accessToken}"
+                )
+                _chatMessages.value = initial
+                _chatError.value = null
+            } catch (e: Exception) {
+                Log.e("AnimeViewModel", "Gagal muat chat", e)
+                _chatError.value = "Gagal muat pesan. Cek koneksi ke server."
+            }
+
+            while (true) {
+                delay(4000)
+                try {
+                    val session = preferencesManager.authSession.first() ?: continue
+                    val lastTimestamp = _chatMessages.value.lastOrNull()?.created_at
+                    if (lastTimestamp == null) {
+                        val all = chatApi.getMessages(
+                            apiKey = SupabaseConfig.SUPABASE_ANON_KEY,
+                            authorization = "Bearer ${session.accessToken}"
+                        )
+                        _chatMessages.value = all
+                    } else {
+                        val newer = chatApi.getMessagesAfter(
+                            apiKey = SupabaseConfig.SUPABASE_ANON_KEY,
+                            authorization = "Bearer ${session.accessToken}",
+                            createdAfter = "gt.$lastTimestamp"
+                        )
+                        if (newer.isNotEmpty()) {
+                            // Hindari duplikat kalau ada pesan dengan timestamp persis sama.
+                            val existingIds = _chatMessages.value.map { it.id }.toSet()
+                            _chatMessages.value = _chatMessages.value + newer.filter { it.id !in existingIds }
+                        }
+                    }
+                    _chatError.value = null
+                } catch (e: Exception) {
+                    Log.e("AnimeViewModel", "Polling chat gagal", e)
+                    // Diem-diem aja kalau polling sesekali gagal (misal jaringan kedip),
+                    // gak usah nampilin error tiap 4 detik -- cukup log doang.
+                }
+            }
+        }
+    }
+
+    /** Dipanggil pas ChatScreen ditutup, biar polling berhenti (hemat baterai & egress). */
+    fun stopChatPolling() {
+        chatPollingJob?.cancel()
+        chatPollingJob = null
+    }
+
+    fun sendChatMessage(text: String) {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                val session = preferencesManager.authSession.first()
+                if (session == null) {
+                    _chatError.value = "Sesi login tidak ditemukan."
+                    return@launch
+                }
+                val newMessage = ChatMessage(
+                    user_id = session.userId,
+                    user_name = session.name ?: session.email,
+                    user_avatar = session.avatarUrl,
+                    message = trimmed
+                )
+                val sent = chatApi.sendMessage(
+                    message = newMessage,
+                    apiKey = SupabaseConfig.SUPABASE_ANON_KEY,
+                    authorization = "Bearer ${session.accessToken}"
+                )
+                if (sent.isNotEmpty()) {
+                    _chatMessages.value = _chatMessages.value + sent
+                }
+                _chatError.value = null
+            } catch (e: Exception) {
+                Log.e("AnimeViewModel", "Gagal kirim pesan chat", e)
+                _chatError.value = "Gagal kirim pesan. Coba lagi."
             }
         }
     }

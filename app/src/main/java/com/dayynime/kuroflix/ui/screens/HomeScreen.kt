@@ -11,6 +11,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.PlayArrow
@@ -51,7 +52,8 @@ fun HomeScreen(
     onAnimeClick: (AnimeItem) -> Unit,
     onContinueWatchClick: (WatchHistoryEntity) -> Unit,
     onScheduleClick: () -> Unit = {},
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onChatClick: () -> Unit = {}
 ) {
     val currentSource by viewModel.selectedSource.collectAsState()
     val homeState by viewModel.homeUiState.collectAsState()
@@ -177,6 +179,13 @@ fun HomeScreen(
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                IconButton(onClick = onChatClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = "Chat Room",
+                        tint = TextPrimary
+                    )
+                }
                 IconButton(onClick = onScheduleClick) {
                     Icon(
                         imageVector = Icons.Default.CalendarMonth,

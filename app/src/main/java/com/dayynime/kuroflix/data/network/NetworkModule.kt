@@ -33,6 +33,13 @@ object NetworkModule {
         return supabaseRetrofit!!.create(SupabaseAuthApi::class.java)
     }
 
+    fun getChatApi(context: Context): ChatApi {
+        if (supabaseRetrofit == null) {
+            supabaseRetrofit = createRetrofit(SupabaseConfig.SUPABASE_URL, context)
+        }
+        return supabaseRetrofit!!.create(ChatApi::class.java)
+    }
+
     fun getCloudinaryApi(context: Context): CloudinaryApi {
         if (cloudinaryRetrofit == null) {
             cloudinaryRetrofit = createRetrofit("https://api.cloudinary.com/", context)
