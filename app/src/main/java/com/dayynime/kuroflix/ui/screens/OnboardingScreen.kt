@@ -1,10 +1,12 @@
 package com.dayynime.kuroflix.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.*
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.VerticalPager
@@ -93,15 +95,15 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
             ).coerceIn(-1f, 1f)
 
-            SceneBackdrop(glow = scene.glow, pageOffset = pageOffset)
-
-            SceneContent(
-                scene = scene,
-                pageOffset = pageOffset,
-                isSettledHere = pagerState.settledPage == page,
-                isFinalScene = page == scenes.lastIndex,
-                onStart = onFinish
-            )
+            Box(modifier = Modifier.fillMaxSize()) {
+                SceneBackdrop(glow = scene.glow, pageOffset = pageOffset)
+                SceneContent(
+                    scene = scene,
+                    pageOffset = pageOffset,
+                    isFinalScene = page == scenes.lastIndex,
+                    onStart = onFinish
+                )
+            }
         }
 
         // Penanda halaman "01 / 04" -- numerik karena ini memang urutan scene.
@@ -114,8 +116,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 .padding(start = 24.dp, top = 48.dp)
         )
 
-        // Indikator progres vertikal di tepi kanan -- gantiin fungsi tombol "Lanjut",
-        // sekaligus nunjukin posisi scroll saat ini.
+        // Indikator progres vertikal di tepi kanan -- gantiin fungsi tombol "Lanjut".
         Column(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
@@ -191,115 +192,101 @@ private fun SceneBackdrop(glow: Color, pageOffset: Float) {
     }
 }
 
+/**
+ * Isi tiap scene. Kemunculannya PURE mengikuti posisi scroll (pageOffset),
+ * bukan state timer terpisah -- jadi dijamin selalu keliatan begitu scene-nya
+ * berada di tengah layar, gak akan "nyangkut" kosong.
+ */
 @Composable
 private fun SceneContent(
     scene: Scene,
     pageOffset: Float,
-    isSettledHere: Boolean,
     isFinalScene: Boolean,
     onStart: () -> Unit
 ) {
-    var revealed by remember { mutableStateOf(false) }
-    LaunchedEffect(isSettledHere) {
-        if (isSettledHere) {
-            revealed = false
-            kotlinx.coroutines.delay(80)
-            revealed = true
-        }
-    }
+    val visibility = 1f - pageOffset.absoluteValue
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 32.dp)
-            .graphicsLayer {
-                // Konten ikut geser & memudar mengikuti posisi scroll asli --
-                // bikin transisi terasa hidup, bukan potong-tempel per halaman.
-                translationY = pageOffset * size.height * 0.35f
-                alpha = 1f - pageOffset.absoluteValue
-            },
+            .padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         if (scene.icon != null) {
-            AnimatedVisibility(
-                visible = revealed,
-                enter = fadeIn(tween(350)) + scaleIn(
-                    initialScale = 0.6f,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
-                )
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    alpha = visibility
+                    translationY = pageOffset * 60f
+                    scaleX = 0.85f + 0.15f * visibility
+                    scaleY = 0.85f + 0.15f * visibility
+                }
             ) {
                 IconMedallion(icon = scene.icon, glow = scene.glow)
             }
             Spacer(modifier = Modifier.height(36.dp))
         } else {
-            AnimatedVisibility(
-                visible = revealed,
-                enter = fadeIn(tween(400)) + scaleIn(initialScale = 0.85f)
-            ) {
-                Text(
-                    text = "薫",
-                    color = scene.glow,
-                    fontSize = 64.sp,
-                    fontWeight = FontWeight.Black
-                )
-            }
+            Text(
+                text = "薫",
+                color = scene.glow,
+                fontSize = 64.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.graphicsLayer {
+                    alpha = visibility
+                    translationY = pageOffset * 60f
+                }
+            )
             Spacer(modifier = Modifier.height(20.dp))
         }
 
-        AnimatedVisibility(
-            visible = revealed,
-            enter = fadeIn(tween(350, delayMillis = 90)) + slideInVertically(
-                initialOffsetY = { it / 3 },
-                animationSpec = tween(350, delayMillis = 90)
-            )
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = scene.eyebrow,
-                    color = scene.glow,
-                    style = Typography.labelSmall,
-                    letterSpacing = 2.sp
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = scene.title,
-                    color = Color.White,
-                    style = Typography.displayLarge,
-                    fontSize = 30.sp,
-                    textAlign = TextAlign.Center
-                )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.graphicsLayer {
+                alpha = visibility
+                translationY = pageOffset * 90f
             }
+        ) {
+            Text(
+                text = scene.eyebrow,
+                color = scene.glow,
+                style = Typography.labelSmall,
+                letterSpacing = 2.sp
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = scene.title,
+                color = Color.White,
+                style = Typography.displayLarge,
+                fontSize = 30.sp,
+                textAlign = TextAlign.Center
+            )
         }
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        AnimatedVisibility(
-            visible = revealed,
-            enter = fadeIn(tween(350, delayMillis = 160)) + slideInVertically(
-                initialOffsetY = { it / 3 },
-                animationSpec = tween(350, delayMillis = 160)
-            )
-        ) {
-            Text(
-                text = scene.description,
-                color = TextSecondary,
-                style = Typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                lineHeight = 20.sp
-            )
-        }
+        Text(
+            text = scene.description,
+            color = TextSecondary,
+            style = Typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            lineHeight = 20.sp,
+            modifier = Modifier.graphicsLayer {
+                alpha = visibility
+                translationY = pageOffset * 120f
+            }
+        )
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        if (isFinalScene) {
-            AnimatedVisibility(
-                visible = revealed,
-                enter = fadeIn(tween(350, delayMillis = 220)) + slideInVertically(
-                    initialOffsetY = { it / 2 },
-                    animationSpec = tween(350, delayMillis = 220)
-                )
-            ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    alpha = visibility
+                    translationY = pageOffset * 150f
+                }
+        ) {
+            if (isFinalScene) {
                 Button(
                     onClick = onStart,
                     shape = RoundedCornerShape(14.dp),
@@ -310,9 +297,7 @@ private fun SceneContent(
                 ) {
                     Text(text = "Mulai", fontWeight = FontWeight.Bold, color = DarkBg)
                 }
-            }
-        } else {
-            AnimatedVisibility(visible = revealed, enter = fadeIn(tween(400, delayMillis = 220))) {
+            } else {
                 ScrollUpHint(glow = scene.glow)
             }
         }
@@ -366,7 +351,10 @@ private fun ScrollUpHint(glow: Color) {
         animationSpec = infiniteRepeatable(tween(700, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "bounce"
     )
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Icon(
             imageVector = Icons.Filled.KeyboardArrowUp,
             contentDescription = null,
