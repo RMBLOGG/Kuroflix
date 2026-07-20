@@ -39,6 +39,7 @@ import com.dayynime.kuroflix.data.model.AnimeItem
 import com.dayynime.kuroflix.ui.components.*
 import com.dayynime.kuroflix.ui.theme.*
 import com.dayynime.kuroflix.ui.viewmodel.AnimeViewModel
+import com.dayynime.kuroflix.ui.viewmodel.AuthUiState
 import com.dayynime.kuroflix.ui.viewmodel.HomeUiState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -55,6 +56,8 @@ fun HomeScreen(
     val currentSource by viewModel.selectedSource.collectAsState()
     val homeState by viewModel.homeUiState.collectAsState()
     val watchHistory by viewModel.history.collectAsState()
+    val authState by viewModel.authState.collectAsState()
+    val loggedInUser = (authState as? AuthUiState.LoggedIn)?.user
 
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
@@ -79,49 +82,99 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            if (loggedInUser != null) {
+                // Sudah login -- tampilin identitas akun (foto profil Google + nama),
+                // gantiin wordmark biar header terasa personal.
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Kuro",
-                        style = Typography.displayLarge,
-                        fontSize = 26.sp,
-                        color = Color.White,
-                        fontWeight = FontWeight.Black
-                    )
-                    Text(
-                        text = "flix",
-                        style = Typography.displayLarge,
-                        fontSize = 26.sp,
-                        color = GoldAccent,
-                        fontWeight = FontWeight.Black
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    // Badge BETA -- nandain app ini masih tahap pengembangan,
-                    // styling-nya disamain sama badge "POPULER" di hero card
-                    // (outline tipis, bukan blok solid) biar konsisten.
                     Box(
                         modifier = Modifier
-                            .background(Color.Transparent, RoundedCornerShape(50.dp))
-                            .border(1.dp, GoldAccent.copy(alpha = 0.7f), RoundedCornerShape(50.dp))
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(DarkSurfaceVariant)
+                            .border(1.5.dp, GoldAccent.copy(alpha = 0.7f), CircleShape),
+                        contentAlignment = Alignment.Center
                     ) {
+                        val avatarUrl = loggedInUser.avatarUrl
+                        if (!avatarUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = avatarUrl,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            val initials = (loggedInUser.name ?: loggedInUser.email)
+                                ?.trim()?.firstOrNull()?.uppercaseChar()?.toString() ?: "K"
+                            Text(text = initials, color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
                         Text(
-                            text = "BETA",
+                            text = "KUROFLIX",
                             color = GoldAccent,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
                         )
+                        Text(
+                            text = loggedInUser.name ?: loggedInUser.email ?: "Pengguna",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = 160.dp)
+                        )
                     }
                 }
-                // Sumber aktif sekarang ditampilin di sini aja (kecil, non-interaktif) --
-                // gantinya tab pill yang dulu di header. Ganti sumbernya lewat Settings.
-                Text(
-                    text = sourceLabels[currentSource] ?: currentSource,
-                    color = TextSecondary,
-                    style = Typography.labelSmall,
-                    fontSize = 11.sp
-                )
+            } else {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Kuro",
+                            style = Typography.displayLarge,
+                            fontSize = 26.sp,
+                            color = Color.White,
+                            fontWeight = FontWeight.Black
+                        )
+                        Text(
+                            text = "flix",
+                            style = Typography.displayLarge,
+                            fontSize = 26.sp,
+                            color = GoldAccent,
+                            fontWeight = FontWeight.Black
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        // Badge BETA -- nandain app ini masih tahap pengembangan,
+                        // styling-nya disamain sama badge "POPULER" di hero card
+                        // (outline tipis, bukan blok solid) biar konsisten.
+                        Box(
+                            modifier = Modifier
+                                .background(Color.Transparent, RoundedCornerShape(50.dp))
+                                .border(1.dp, GoldAccent.copy(alpha = 0.7f), RoundedCornerShape(50.dp))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "BETA",
+                                color = GoldAccent,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    }
+                    // Sumber aktif sekarang ditampilin di sini aja (kecil, non-interaktif) --
+                    // gantinya tab pill yang dulu di header. Ganti sumbernya lewat Settings.
+                    Text(
+                        text = sourceLabels[currentSource] ?: currentSource,
+                        color = TextSecondary,
+                        style = Typography.labelSmall,
+                        fontSize = 11.sp
+                    )
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(onClick = onScheduleClick) {
