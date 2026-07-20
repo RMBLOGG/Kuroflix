@@ -1,27 +1,43 @@
 package com.dayynime.kuroflix.ui.screens
 
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
+import com.dayynime.kuroflix.R
 import com.dayynime.kuroflix.data.network.SupabaseConfig
 import com.dayynime.kuroflix.ui.theme.DarkBg
 import com.dayynime.kuroflix.ui.theme.OrangeAccent
 import com.dayynime.kuroflix.ui.theme.TextSecondary
+import com.dayynime.kuroflix.ui.theme.Typography
 import com.dayynime.kuroflix.ui.viewmodel.AnimeViewModel
 import com.dayynime.kuroflix.ui.viewmodel.AuthUiState
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
@@ -78,66 +94,126 @@ fun LoginScreen(
         }
     }
 
-    Scaffold(containerColor = DarkBg) { padding ->
+    val infinite = rememberInfiniteTransition(label = "login_backdrop")
+    val breathe by infinite.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(5200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "breathe"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DarkBg)
+    ) {
+        // Backdrop cahaya senada sama scene terakhir onboarding, biar transisinya nyambung.
+        val softGlow = Brush.radialGradient(
+            colorStops = arrayOf(
+                0.0f to OrangeAccent.copy(alpha = 0.35f),
+                0.35f to OrangeAccent.copy(alpha = 0.20f),
+                0.7f to OrangeAccent.copy(alpha = 0.08f),
+                1.0f to Color.Transparent
+            )
+        )
         Box(
             modifier = Modifier
+                .size(300.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = (-80 + breathe * 20).dp)
+                .background(softGlow, shape = CircleShape)
+        )
+
+        Column(
+            modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
+                .padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(RoundedCornerShape(24.dp))
             ) {
-                Text(
-                    text = "Masuk ke Kuroflix",
-                    color = Color.White,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold
+                Image(
+                    painter = painterResource(id = R.drawable.ic_launcher_kuroflix),
+                    contentDescription = "Kuroflix",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
                 )
-                Text(
-                    text = "Sinkronkan bookmark & riwayat tontonan kamu lewat akun Google.",
-                    color = TextSecondary,
-                    fontSize = 14.sp
-                )
+            }
 
-                Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-                when (val state = authState) {
-                    is AuthUiState.Loading -> {
-                        CircularProgressIndicator(color = OrangeAccent)
-                    }
-                    else -> {
-                        Button(
-                            onClick = { startGoogleSignIn() },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White,
-                                contentColor = Color.Black
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp)
+            Text(
+                text = "Masuk ke Kuroflix",
+                color = Color.White,
+                style = Typography.displayLarge,
+                fontSize = 26.sp,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "Sinkronkan bookmark & riwayat tontonan kamu lewat akun Google.",
+                color = TextSecondary,
+                style = Typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                lineHeight = 20.sp
+            )
+
+            Spacer(modifier = Modifier.height(36.dp))
+
+            when (authState) {
+                is AuthUiState.Loading -> {
+                    CircularProgressIndicator(color = OrangeAccent)
+                }
+                else -> {
+                    Surface(
+                        onClick = { startGoogleSignIn() },
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color.White,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "Lanjutkan dengan Google", fontWeight = FontWeight.SemiBold)
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_google_logo),
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Lanjutkan dengan Google",
+                                color = Color.Black,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp
+                            )
                         }
                     }
                 }
+            }
 
-                val displayedError = errorMessage ?: (authState as? AuthUiState.Error)?.message
-                if (displayedError != null) {
-                    Text(
-                        text = displayedError,
-                        color = Color(0xFFFF5252),
-                        fontSize = 13.sp
-                    )
-                }
+            val displayedError = errorMessage ?: (authState as? AuthUiState.Error)?.message
+            AnimatedVisibility(visible = displayedError != null, enter = fadeIn()) {
+                Text(
+                    text = displayedError ?: "",
+                    color = Color(0xFFFF5252),
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+            }
 
-                if (allowSkip) {
-                    TextButton(onClick = onBackClick) {
-                        Text(text = "Nanti saja", color = TextSecondary)
-                    }
+            if (allowSkip) {
+                Spacer(modifier = Modifier.height(20.dp))
+                TextButton(onClick = onBackClick) {
+                    Text(text = "Nanti saja", color = TextSecondary)
                 }
             }
         }

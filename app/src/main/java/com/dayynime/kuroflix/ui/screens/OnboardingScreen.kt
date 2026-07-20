@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.VerticalPager
@@ -27,10 +28,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dayynime.kuroflix.R
 import com.dayynime.kuroflix.ui.theme.DarkBg
 import com.dayynime.kuroflix.ui.theme.GoldAccent
 import com.dayynime.kuroflix.ui.theme.TextSecondary
@@ -227,17 +231,25 @@ private fun SceneContent(
             }
             Spacer(modifier = Modifier.height(36.dp))
         } else {
-            Text(
-                text = "薫",
-                color = scene.glow,
-                fontSize = 64.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.graphicsLayer {
-                    alpha = visibility
-                    translationY = pageOffset * 60f
-                }
-            )
-            Spacer(modifier = Modifier.height(20.dp))
+            Box(
+                modifier = Modifier
+                    .size(108.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .graphicsLayer {
+                        alpha = visibility
+                        translationY = pageOffset * 60f
+                        scaleX = 0.85f + 0.15f * visibility
+                        scaleY = 0.85f + 0.15f * visibility
+                    }
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_launcher_kuroflix),
+                    contentDescription = "Kuroflix",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            Spacer(modifier = Modifier.height(28.dp))
         }
 
         Column(
