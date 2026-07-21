@@ -285,6 +285,32 @@ class AnimeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Hapus pesan sendiri. Optimistic update dulu (langsung ilang dari UI),
+     * kalau ternyata gagal di server, balikin lagi ke daftar. */
+    fun deleteChatMessage(messageId: String) {
+        val before = _chatMessages.value
+        _chatMessages.value = before.filterNot { it.id == messageId }
+        viewModelScope.launch {
+            try {
+                val session = preferencesManager.authSession.first()
+                if (session == null) {
+                    _chatMessages.value = before
+                    _chatError.value = "Sesi login tidak ditemukan."
+                    return@launch
+                }
+                chatApi.deleteMessage(
+                    apiKey = SupabaseConfig.SUPABASE_ANON_KEY,
+                    authorization = "Bearer ${session.accessToken}",
+                    idFilter = "eq.$messageId"
+                )
+            } catch (e: Exception) {
+                Log.e("AnimeViewModel", "Gagal hapus pesan chat", e)
+                _chatMessages.value = before
+                _chatError.value = "Gagal hapus pesan. Coba lagi."
+            }
+        }
+    }
+
     fun logout() {
         viewModelScope.launch {
             preferencesManager.clearAuthSession()

@@ -1,6 +1,8 @@
 package com.dayynime.kuroflix.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -41,6 +43,7 @@ fun ChatScreen(
     val myUserId = (authState as? AuthUiState.LoggedIn)?.user?.id
 
     var input by remember { mutableStateOf("") }
+    var messageToDelete by remember { mutableStateOf<ChatMessage?>(null) }
     val listState = rememberLazyListState()
 
     // Mulai polling begitu layar ini dibuka, berhenti begitu ditutup --
@@ -143,15 +146,44 @@ fun ChatScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 itemsIndexed(messages, key = { _, m -> m.id ?: "${m.user_id}-${m.created_at}" }) { _, msg ->
-                    ChatBubble(msg = msg, isMine = msg.user_id == myUserId)
+                    ChatBubble(
+                        msg = msg,
+                        isMine = msg.user_id == myUserId,
+                        onLongPress = { if (msg.user_id == myUserId) messageToDelete = msg }
+                    )
                 }
             }
+        }
+
+        if (messageToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { messageToDelete = null },
+                title = { Text("Hapus pesan?") },
+                text = { Text("Pesan ini bakal dihapus permanen.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        messageToDelete?.id?.let { viewModel.deleteChatMessage(it) }
+                        messageToDelete = null
+                    }) {
+                        Text("Hapus", color = Color(0xFFFF5252))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { messageToDelete = null }) {
+                        Text("Batal")
+                    }
+                },
+                containerColor = DarkSurface,
+                titleContentColor = Color.White,
+                textContentColor = TextSecondary
+            )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ChatBubble(msg: ChatMessage, isMine: Boolean) {
+private fun ChatBubble(msg: ChatMessage, isMine: Boolean, onLongPress: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start
@@ -183,6 +215,10 @@ private fun ChatBubble(msg: ChatMessage, isMine: Boolean) {
                         )
                     )
                     .background(if (isMine) OrangeAccent else DarkSurfaceVariant)
+                    .combinedClickable(
+                        onClick = {},
+                        onLongClick = onLongPress
+                    )
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Text(text = msg.message, color = Color.White, fontSize = 14.sp)
